@@ -1,0 +1,3703 @@
+  <!DOCTYPE html>
+  <html lang="id">
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1a2456">
+<meta name="description" content="R-LAB — Smart Sorting Factory Dashboard. Real-time object sorting analytics, mobile drawer menu, desktop sidebar navigation.">
+<link rel="icon" type="image/png" href="logo.png">
+<link rel="apple-touch-icon" href="logo.png">
+<title>R-LAB · Smart Sorting Dashboard</title>
+
+  <!-- ================= DEPENDENCIES ================= -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' };</script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Inter self-hosted (lokal) — supaya tidak 404 dan tetap jalan tanpa internet */
+@font-face{font-family:'Inter';font-style:normal;font-weight:100 900;font-display:swap;
+  src:url('assets/fonts/Inter-Variable.woff2') format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+</style>
+
+  <!-- TensorFlow.js + Teachable Machine -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+<!-- Rich Export Libraries -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+  <style>
+  /* ================= THEME TOKENS ================= */
+  :root{
+    --bg:#f4f6f9; --surface:#ffffff; --surface-solid:#ffffff;
+    --surface-soft:#eef2f7;
+    --border:#e2e8f0; --text:#0f172a; --muted:#64748b;
+    --brand:#1a2456; --brand2:#1a2456;
+    --gold:#c69a45; --gold-soft:#f8efdb;
+    --shadow:0 1px 2px rgba(15,23,42,.06),0 10px 28px -18px rgba(15,23,42,.22);
+  }
+  html.dark{
+    --bg:#0b1220; --surface:#121d33; --surface-solid:#16233f;
+    --surface-soft:rgba(148,163,184,.12);
+    --border:rgba(148,163,184,.18); --text:#e8eef7; --muted:#94a3b8;
+    --brand:#5a86d6; --brand2:#5a86d6;
+    --gold:#d4af5e; --gold-soft:rgba(198,154,69,.14);
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 14px 30px -18px rgba(0,0,0,.7);
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+    overflow:hidden; -webkit-font-smoothing:antialiased;
+    transition:background .25s ease,color .25s ease;
+  }
+  .t-main{color:var(--text);} .t-muted{color:var(--muted);}
+  .font-display{font-family:'Inter',system-ui,sans-serif;letter-spacing:-.02em;}
+  .orbs{display:none!important;}
+
+  #app-shell{
+    position:relative;z-index:1;display:flex;
+    height:100vh;height:100dvh;width:100%;
+    transition:padding .3s ease;
+    background:var(--bg);
+  }
+  #app-shell.pos-left  {flex-direction:row;}
+  #app-shell.pos-right {flex-direction:row-reverse;}
+  #app-shell.pos-top{flex-direction:column;}
+
+  .glass{background:var(--surface);border:1px solid var(--border);}
+
+  #sidebar{
+    width:264px;flex:0 0 264px;display:none;flex-direction:column;gap:1rem;
+    padding:1.25rem;height:100%;overflow-y:auto;
+    border-right:1px solid var(--border);
+    background:var(--surface);
+    transition:border-color .25s ease,background .25s ease;
+  }
+  #app-shell.pos-right #sidebar{border-right:none;border-left:1px solid var(--border);}
+  #app-shell.pos-top #sidebar{display:none!important;}
+  @media(min-width:1024px){#app-shell:not(.pos-top) #sidebar{display:flex;}}
+
+  #bottombar{
+    display:none;align-items:center;gap:.5rem;
+    padding:.55rem 1rem;
+    border-bottom:1px solid var(--border);
+    background:var(--surface);
+    flex:0 0 auto;z-index:30;
+    transition:border-color .25s ease,background .25s ease;
+  }
+  .bottom-tabs{display:flex;flex:1;align-items:center;justify-content:space-around;gap:.25rem;}
+  .bottom-brand{display:none;align-items:center;gap:.7rem;flex:0 0 auto;}
+  .bottom-brand .brand-logo{
+    width:34px;height:34px;border-radius:.7rem;display:flex;align-items:center;justify-content:center;
+    background:var(--brand);color:#fff;font-size:.85rem;
+  }
+  .bottom-brand .brand-text{display:flex;flex-direction:column;line-height:1.05;}
+  .bottom-brand .brand-name{
+    font-family:'Inter',system-ui,sans-serif;font-weight:800;font-size:.85rem;
+    letter-spacing:.06em;color:var(--text);
+  }
+  .bottom-brand .brand-sub{font-size:.55rem;font-weight:800;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;}
+  .bottom-spacer{display:none;align-items:center;gap:.45rem;justify-content:flex-end;flex:0 0 auto;min-width:120px;}
+
+  @media(min-width:1024px){
+    #app-shell:not(.pos-top) #bottombar{display:none!important;}
+    #app-shell.pos-top #bottombar{
+      display:flex;order:-1;justify-content:space-between;gap:1.5rem;
+      padding:.6rem 1.5rem;border-top:none;border-bottom:1px solid var(--border);
+    }
+    #app-shell.pos-top #bottombar .bottom-brand{display:flex;}
+    #app-shell.pos-top #bottombar .bottom-tabs{flex:0 1 auto;gap:.4rem;}
+    #app-shell.pos-top #bottombar .bottom-spacer{display:flex;}
+    #app-shell.pos-top #bottombar .tab-btn{flex:0 0 auto;flex-direction:row;gap:.55rem;font-size:.8rem;padding:.6rem 1rem;}
+  }
+
+  #btn-menu{display:inline-flex;}
+  @media(min-width:1024px){#btn-menu{display:none!important;}}
+  #drawer-backdrop{
+    position:fixed;inset:0;z-index:140;display:block;
+    background:rgba(15,23,42,.45);
+    opacity:0;pointer-events:none;transition:opacity .28s ease;
+  }
+  #drawer-backdrop.show{opacity:1;pointer-events:auto;}
+  #mobile-drawer{
+    position:fixed;top:0;left:0;bottom:0;z-index:150;
+    width:min(320px,86vw);display:flex;flex-direction:column;gap:1rem;
+    padding:1.1rem 1.1rem calc(1.1rem + env(safe-area-inset-bottom,0px));
+    padding-top:calc(1.1rem + env(safe-area-inset-top,0px));
+    background:var(--surface-solid);border-right:1px solid var(--border);
+    box-shadow:0 10px 30px -12px rgba(15,23,42,.25);
+    transform:translateX(-103%);transition:transform .32s ease-out;
+    overflow-y:auto;overscroll-behavior:contain;will-change:transform;
+  }
+  #mobile-drawer.open{transform:translateX(0);}
+  @media(min-width:1024px){#mobile-drawer,#drawer-backdrop{display:none!important;}}
+  .mnav-btn{
+    display:flex;align-items:center;gap:.8rem;width:100%;
+    padding:.85rem .95rem;border-radius:1rem;font-size:.85rem;font-weight:800;
+    color:var(--muted);background:transparent;border:1px solid transparent;
+    cursor:pointer;transition:.22s;text-align:left;min-height:48px;
+  }
+  .mnav-btn i{width:1.25rem;text-align:center;font-size:1rem;}
+  .mnav-btn:active{transform:scale(.98);}
+  .mnav-btn.active{color:var(--brand);border-color:transparent;background:#e8effe;}
+  html.dark .mnav-btn.active{background:rgba(59,130,246,.15);}
+
+  .status-group{
+    display:flex;align-items:center;gap:.4rem;flex:1 1 auto;min-width:0;
+    overflow-x:auto;scrollbar-width:none;padding-block:.1rem;
+  }
+  .status-group::-webkit-scrollbar{display:none;}
+  .topbar-actions{display:flex;align-items:center;gap:.45rem;margin-left:auto;flex:0 0 auto;}
+  @media(max-width:1023.98px){
+    .topbar{gap:.55rem;padding:.6rem .7rem;padding-top:calc(.6rem + env(safe-area-inset-top,0px));}
+    .topbar .pill{font-size:.55rem;padding:.28rem .55rem;}
+    #btn-conn-bt{padding:.6rem .8rem;font-size:.65rem;min-height:40px;}
+    .icon-btn{width:40px;height:40px;border-radius:.85rem;}
+  }
+  @media(min-width:1024px){
+    .topbar{padding:.7rem 1.4rem;gap:.75rem;}
+    .status-group{flex:0 1 auto;}
+  }
+
+  .scroll-area{flex:1;overflow-y:auto;overflow-x:hidden;padding:1rem;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;}
+  @media(min-width:768px){.scroll-area{padding:1.5rem;}}
+  @media(min-width:1280px){.scroll-area{padding:2rem;}}
+  .page{max-width:1220px;margin-inline:auto;width:100%;}
+  .scroll-area:has(#page-team.active) #page-team{max-width:1080px;}
+
+  @media(max-width:640px){
+    .card{border-radius:1.1rem;}
+    .metric-value{font-size:1.45rem;}
+    .metric-icon{width:34px;height:34px;font-size:.85rem;margin-bottom:.5rem;}
+    .btn-primary,.btn-warn,.btn-ghost{min-height:44px;}
+    .seg button{min-height:42px;font-size:.68rem;}
+    .export-tile{padding:.95rem .5rem;}
+    .team-card{padding:1.5rem 1rem 1.25rem;}
+    h1{line-height:1.2;overflow-wrap:anywhere;}
+    .webcam-wrap{min-height:210px;}
+  }
+  @media(min-width:1024px){
+    .card{border-radius:1.35rem;}
+    .webcam-wrap{min-height:230px;}
+  }
+
+  @media(max-width:640px){
+    .modal{align-items:flex-end;padding:0;}
+    .modal-panel{
+      max-width:100%;width:100%;max-height:92dvh;
+      border-radius:1.4rem 1.4rem 0 0;padding:1.25rem 1.1rem calc(1.25rem + env(safe-area-inset-bottom,0px));
+      border-bottom:none;
+    }
+    .modal-panel::before{
+      content:'';display:block;width:44px;height:5px;border-radius:999px;
+      background:rgba(148,163,184,.45);margin:0 auto .9rem;
+    }
+  }
+
+  :focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
+  @media(prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}
+  }
+
+  .main-area{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0;}
+  .topbar{
+    display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;
+    padding:.6rem .85rem;border-bottom:1px solid var(--border);
+    background:var(--surface);
+    box-shadow:inset 0 -2px 0 var(--gold);
+    flex:0 0 auto;z-index:20;
+    transition:border-color .25s ease,background .25s ease;
+  }
+
+  .page{display:none;}
+  .page.active{display:block;animation:pageIn .3s ease-out both;}
+  @keyframes pageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  @keyframes cardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  @keyframes sideInLeft{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:none}}
+  @keyframes sideInRight{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:none}}
+  @keyframes barDown{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:none}}
+  @keyframes mainShift{from{opacity:.5;transform:translateY(6px)}to{opacity:1;transform:none}}
+  @keyframes drawerItem{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
+  @keyframes logIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  @keyframes metricPop{0%{transform:scale(1)}40%{transform:scale(1.06)}100%{transform:scale(1)}}
+  @keyframes modalIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  @keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .page.active .card{animation:cardIn .3s ease-out both;}
+  .page.active .team-card{animation:cardIn .3s ease-out both;}
+  #app-shell.is-switching .main-area{animation:mainShift .3s ease-out both;}
+  @media(min-width:1024px){
+    #app-shell.pos-left.is-switching #sidebar{animation:sideInLeft .3s ease-out both;}
+    #app-shell.pos-right.is-switching #sidebar{animation:sideInRight .3s ease-out both;}
+    #app-shell.pos-top.is-switching #bottombar{animation:barDown .3s ease-out both;}
+  }
+  #mobile-drawer.open .mnav-btn{animation:drawerItem .28s ease-out both;}
+  #mobile-drawer.open nav .mnav-btn:nth-child(2){animation-delay:.04s;}
+  #mobile-drawer.open nav .mnav-btn:nth-child(3){animation-delay:.08s;}
+  .sidebar-btn,.mnav-btn,.tab-btn{position:relative;}
+  .sidebar-btn::after,.mnav-btn::after{
+    content:'';position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:999px;
+    background:var(--gold);
+    transform:scaleY(0);transform-origin:top;transition:transform .22s ease;
+  }
+  .sidebar-btn.active::after,.mnav-btn.active::after{transform:scaleY(1);}
+  .tab-btn.active{background:var(--gold-soft);color:var(--brand);}
+  html.dark .tab-btn.active{background:rgba(198,154,69,.16);}
+  .btn-primary:active,.btn-warn:active,.btn-ghost:active,.icon-btn:active{transform:scale(.97);}
+  .metric-value.pop{animation:metricPop .3s ease-out;}
+  .log-item{animation:logIn .28s ease-out;}
+  .modal.open .modal-panel{animation:modalIn .3s ease-out both;}
+  #toast.show .toast-inner{animation:toastIn .28s ease-out;}
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);border-radius:1rem;
+    box-shadow:var(--shadow);
+    transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease;
+  }
+  .card-hover:hover{transform:translateY(-2px);border-color:#e3cf9a;box-shadow:0 1px 2px rgba(15,23,42,.07),0 14px 30px -18px rgba(198,154,69,.45);}
+  .card-title{font-weight:800;font-size:.82rem;display:flex;align-items:center;gap:.5rem;}
+  .card-title i{color:var(--brand);}
+
+  .btn-primary{
+    background:var(--brand);color:#fff;font-weight:700;
+    border-radius:.75rem;border:none;cursor:pointer;
+    box-shadow:0 1px 2px rgba(15,23,42,.2);
+    transition:background .2s ease,transform .15s ease;
+  }
+.btn-primary:hover{background:#101c44;transform:translateY(-1px);}
+html.dark .btn-primary:hover{background:#4a76c4;}
+  .btn-primary:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none;}
+  .btn-warn{background:#d97706;color:#fff;font-weight:700;border-radius:.75rem;border:none;cursor:pointer;transition:background .2s ease,transform .15s ease;}
+  .btn-warn:hover{background:#b45309;transform:translateY(-1px);}
+  .btn-warn.is-resume{background:#16a34a;}
+  .btn-ghost{
+    background:var(--surface-soft);color:var(--muted);border:1px solid var(--border);
+    border-radius:.75rem;font-weight:600;cursor:pointer;transition:background .2s ease,color .2s ease,border-color .2s ease;
+  }
+.btn-ghost:hover{color:var(--brand);border-color:#e3cf9a;background:var(--gold-soft);}
+html.dark .btn-ghost:hover{background:rgba(198,154,69,.12);}
+  .icon-btn{
+    width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;
+    border-radius:.7rem;background:var(--surface);border:1px solid var(--border);
+    color:var(--muted);cursor:pointer;transition:background .2s ease,color .2s ease,border-color .2s ease;flex:0 0 auto;
+  }
+.icon-btn:hover{color:var(--brand);border-color:#e3cf9a;background:var(--gold-soft);}
+html.dark .icon-btn:hover{background:rgba(198,154,69,.12);}
+  .icon-btn:disabled{opacity:.35;cursor:not-allowed;transform:none;}
+  .icon-btn.danger:hover{color:#dc2626;border-color:#fecaca;background:#fef2f2;}
+
+  .sidebar-btn{
+    display:flex;align-items:center;gap:.75rem;width:100%;padding:.7rem .85rem;
+    border-radius:.75rem;color:var(--muted);font-weight:600;font-size:.83rem;
+    background:transparent;border:1px solid transparent;cursor:pointer;
+    transition:background .2s ease,color .2s ease; text-align:left;
+  }
+  .sidebar-btn i{width:1.1rem;text-align:center;font-size:.95rem;}
+  .sidebar-btn:hover{background:var(--surface-soft);color:var(--text);}
+  .sidebar-btn.active{background:var(--gold-soft);color:var(--brand);border-color:transparent;}
+  html.dark .sidebar-btn.active{background:rgba(198,154,69,.14);}
+  html.dark .sidebar-btn:hover{background:rgba(148,163,184,.12);color:var(--text);}
+
+  .tab-btn{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:.18rem;
+    padding:.5rem .25rem;border-radius:.7rem;color:var(--muted);
+    font-size:.68rem;font-weight:700;background:transparent;border:none;
+    cursor:pointer;transition:background .2s ease,color .2s ease;white-space:nowrap;
+  }
+  .tab-btn i{font-size:1rem;}
+  .tab-btn:hover:not(.active){color:var(--text);background:var(--surface-soft);}
+
+  .pill{
+    font-size:.58rem;font-weight:800;letter-spacing:.05em;padding:.3rem .6rem;
+    border-radius:999px;background:var(--surface-soft);color:var(--muted);
+    border:1px solid var(--border);white-space:nowrap;transition:.3s;
+  }
+  .pill.on{background:rgba(34,197,94,.16);color:#16a34a;border-color:rgba(34,197,94,.38);}
+  .pill.blue{background:#dbe4f5;color:#1a2456;border-color:#b3c3e2;}
+  .pill.warn{background:rgba(234,179,8,.18);color:#ca8a04;border-color:rgba(234,179,8,.42);}
+  html.dark .pill.on{color:#4ade80;} html.dark .pill.blue{color:#60a5fa;} html.dark .pill.warn{color:#facc15;}
+
+  .metric-value{font-size:clamp(1.5rem,4vw,2rem);font-weight:900;line-height:1.05;letter-spacing:-.03em;}
+  .metric-label{font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);}
+  .metric-icon{
+    width:38px;height:38px;border-radius:.85rem;display:flex;align-items:center;justify-content:center;
+    font-size:.95rem;margin-bottom:.65rem;
+  }
+
+  .inp{
+    width:100%;padding:.6rem .8rem;border-radius:.8rem;border:1px solid var(--border);
+    background:var(--surface-soft);color:var(--text);font-size:.76rem;font-weight:600;
+    outline:none;transition:.25s;
+  }
+  .inp::placeholder{color:var(--muted);font-weight:500;}
+  .inp:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(198,154,69,.22);}
+  select.inp{cursor:pointer;}
+
+  .webcam-wrap{
+    position:relative;width:100%;border-radius:.9rem;overflow:hidden;
+    background:var(--surface-soft);
+    border:1px solid var(--border);min-height:190px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .webcam-wrap canvas{
+  width:100%!important;
+  height:auto!important;
+  display:block;
+  transform:scaleX(-1); /* mirror preview */
+}
+  #pause-overlay{
+    position:absolute;inset:0;background:rgba(15,23,42,.72);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.4rem;
+    opacity:0;pointer-events:none;transition:opacity .25s ease;z-index:5;
+  }
+  #pause-overlay.show{opacity:1;pointer-events:auto;}
+
+  .log-item{
+    display:flex;align-items:center;gap:.7rem;padding:.6rem .7rem;border-radius:.8rem;
+    background:var(--surface);border:1px solid var(--border);
+  }
+  .log-ico{width:30px;height:30px;border-radius:.65rem;display:flex;align-items:center;justify-content:center;font-size:.7rem;flex:0 0 auto;}
+
+  .team-card{
+    position:relative;border-radius:1rem;padding:1.75rem 1.25rem 1.5rem;text-align:center;
+    background:var(--surface);border:1px solid var(--border);
+    overflow:hidden;
+    transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease;
+  }
+  .team-card:hover{transform:translateY(-3px);border-color:#c7d7f8;box-shadow:var(--shadow);}
+  .team-avatar{
+    width:64px;height:64px;border-radius:1rem;margin:0 auto .9rem;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Inter',system-ui,sans-serif;font-weight:800;font-size:1.2rem;color:#fff;
+    background:var(--c1);
+    transition:transform .22s ease;
+  }
+  .team-card:hover .team-avatar{transform:translateY(-2px);}
+  .role-chip{
+    display:inline-block;margin-top:.55rem;padding:.32rem .75rem;border-radius:999px;
+    font-size:.6rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+    background:var(--surface-soft);border:1px solid var(--border);color:var(--muted);
+  }
+
+  .kbd{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:20px;height:20px;padding:0 6px;border-radius:6px;
+    font-size:.62rem;font-weight:800;font-family:'Inter',system-ui,sans-serif;
+    background:var(--surface-solid);border:1px solid var(--border);
+    border-bottom-width:2px;color:var(--muted);
+  }
+
+  .modal{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;padding:1rem;}
+  .modal.open{display:flex;}
+  .modal-backdrop{position:absolute;inset:0;background:rgba(15,23,42,.5);}
+  .modal-panel{
+    position:relative;z-index:1;width:100%;max-width:540px;max-height:88vh;overflow-y:auto;
+    border-radius:1rem;padding:1.5rem;background:var(--surface-solid);
+    border:1px solid var(--border);box-shadow:var(--shadow);
+  }
+
+  .switch{position:relative;width:48px;height:28px;border-radius:999px;background:#cbd5e1;cursor:pointer;transition:background .2s ease;flex:0 0 auto;border:none;}
+  .switch::after{content:'';position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s ease;box-shadow:0 1px 3px rgba(0,0,0,.25);}
+  .switch.on{background:var(--gold);}
+  .switch.on::after{transform:translateX(20px);}
+  .seg{display:flex;gap:.3rem;background:var(--surface-soft);padding:.3rem;border-radius:.8rem;border:1px solid var(--border);}
+  .seg button{flex:1;padding:.55rem .3rem;border-radius:.6rem;font-size:.72rem;font-weight:700;color:var(--muted);border:none;background:transparent;cursor:pointer;transition:background .2s ease,color .2s ease;}
+  .seg button.active{background:var(--surface-solid);color:var(--brand);box-shadow:0 1px 3px rgba(15,23,42,.15);}
+
+  .export-tile{
+    display:flex;flex-direction:column;align-items:center;gap:.3rem;padding:1.1rem .6rem;
+    border-radius:.9rem;background:var(--surface);border:1px solid var(--border);
+    cursor:pointer;transition:transform .2s ease,border-color .2s ease;color:var(--text);
+  }
+  .export-tile i{font-size:1.4rem;margin-bottom:.15rem;}
+  .export-tile span{font-size:.78rem;font-weight:700;}
+  .export-tile small{font-size:.58rem;color:var(--muted);font-weight:600;letter-spacing:.04em;}
+  .export-tile:hover{transform:translateY(-2px);border-color:#e3cf9a;}
+  @keyframes tileIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+  .modal.open .export-tile{animation:tileIn .35s ease-out both;}
+  .modal.open .export-tile:nth-child(2){animation-delay:.06s;}
+  .modal.open .export-tile:nth-child(3){animation-delay:.12s;}
+  .modal.open .export-tile:nth-child(4){animation-delay:.18s;}
+  .metric-value,.font-mono{font-variant-numeric:tabular-nums;}
+
+  /* ================= JARVIS ================= */
+  #jarvis-fab{
+    position:fixed;right:16px;bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:160;
+    width:56px;height:56px;border-radius:50%;border:2px solid var(--gold);
+    background:var(--brand);color:#fff;font-size:1.25rem;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 12px 30px -10px rgba(15,23,42,.55);
+    transition:transform .2s ease,box-shadow .2s ease;
+  }
+  #jarvis-fab:hover{transform:translateY(-2px) scale(1.03);}
+  #jarvis-fab:active{transform:scale(.95);}
+  #jarvis-fab.listening{background:#dc2626;border-color:#fecaca;animation:jarvisPulse 1.2s infinite;}
+  @keyframes jarvisPulse{0%{box-shadow:0 0 0 0 rgba(220,38,38,.5)}70%{box-shadow:0 0 0 14px rgba(220,38,38,0)}100%{box-shadow:0 0 0 0 rgba(220,38,38,0)}}
+  #jarvis-panel{
+    position:fixed;z-index:160;right:16px;bottom:calc(142px + env(safe-area-inset-bottom,0px));
+    width:min(370px,calc(100vw - 32px));height:min(500px,calc(100dvh - 220px));min-height:340px;
+    display:none;flex-direction:column;overflow:hidden;
+    background:var(--surface-solid);border:1px solid var(--border);
+    border-top:3px solid var(--gold);border-radius:1rem;box-shadow:var(--shadow);
+  }
+  #jarvis-panel.open{display:flex;animation:modalIn .3s ease-out both;}
+  .jarvis-head{display:flex;align-items:center;gap:.6rem;padding:.7rem .85rem;border-bottom:1px solid var(--border);flex:0 0 auto;}
+  .jarvis-head img{width:32px;height:32px;border-radius:.6rem;object-fit:cover;border:1px solid var(--border);}
+  .jarvis-head .t{flex:1;min-width:0;line-height:1.2;}
+  .jarvis-head .t b{font-size:.82rem;display:block;}
+  .jarvis-head .t small{font-size:.62rem;color:var(--muted);}
+  .jarvis-msgs{flex:1;overflow-y:auto;padding:.7rem .8rem;display:flex;flex-direction:column;gap:.5rem;}
+  .jarvis-msg{max-width:88%;padding:.55rem .75rem;border-radius:.9rem;font-size:.76rem;line-height:1.45;animation:logIn .25s ease-out;}
+  .jarvis-msg.bot{background:var(--surface-soft);border:1px solid var(--border);align-self:flex-start;border-top-left-radius:.25rem;}
+  .jarvis-msg.user{background:var(--brand);color:#fff;align-self:flex-end;border-top-right-radius:.25rem;}
+  .jarvis-src{display:block;font-size:.6rem;font-weight:700;letter-spacing:.05em;margin-top:.3rem;opacity:.55;}
+  /* Mode terang: teks chat dipaksa gelap agar hurufnya jelas,
+     pesan bot diberi latar putih + bayangan tipis supaya kontras. */
+  html:not(.dark) .jarvis-msg.bot{color:#0f172a;font-weight:500;}
+  html.dark .jarvis-msg.bot{color:#e8eef7;}
+  html:not(.dark) .jarvis-msg.bot{background:#ffffff;border-color:#dbe3ea;box-shadow:0 1px 3px rgba(15,23,42,.08);}
+  html:not(.dark) .jarvis-input .inp{color:#0f172a;}
+  html.dark .jarvis-input .inp{color:#e8eef7;}
+  html:not(.dark) .jarvis-input .inp::placeholder{color:#64748b;}
+  html.dark .jarvis-input .inp::placeholder{color:#94a3b8;}
+  html:not(.dark) .jarvis-chip{color:#374151;}
+  html.dark .jarvis-chip{color:#cbd5e1;}
+  .jarvis-chips{display:flex;gap:.35rem;overflow-x:auto;padding:.45rem .8rem;scrollbar-width:none;flex:0 0 auto;}
+  .jarvis-chips::-webkit-scrollbar{display:none;}
+  .jarvis-chip{flex:0 0 auto;font-size:.64rem;font-weight:700;padding:.35rem .65rem;border-radius:999px;border:1px solid var(--border);background:var(--surface-soft);color:var(--muted);cursor:pointer;white-space:nowrap;}
+  .jarvis-chip:hover{color:var(--brand);border-color:#e3cf9a;}
+  .jarvis-input{display:flex;gap:.4rem;padding:.55rem .7rem;border-top:1px solid var(--border);flex:0 0 auto;}
+  .jarvis-input .inp{margin:0;}
+
+
+  .live-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 0 rgba(34,197,94,.6);animation:pulse 2s infinite;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.55)}70%{box-shadow:0 0 0 10px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+
+  #toast{
+    position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));right:16px;left:16px;z-index:500;
+    display:flex;justify-content:flex-end;pointer-events:none;
+    transform:translateY(140%);transition:transform .3s ease-out;
+    max-width:calc(100vw - 32px);margin-left:auto;
+  }
+  @media(min-width:640px){#toast{left:auto;}}
+  @media(min-width:1024px){#toast{bottom:24px;}}
+  #toast.show{transform:translateY(0);}
+  .toast-inner{
+    background:#0f172a;color:#fff;
+    padding:.8rem 1.1rem;border-radius:.8rem;font-size:.75rem;font-weight:600;
+    display:flex;align-items:center;gap:.6rem;pointer-events:auto;
+    box-shadow:0 10px 28px -12px rgba(0,0,0,.5);border:1px solid rgba(148,163,184,.25);
+    max-width:100%;
+  }
+  @media(max-width:639px){.toast-inner{width:100%;justify-content:flex-start;}}
+
+  /* ================= LOGIN GATE ================= */
+  #login-gate{
+    position:fixed;inset:0;z-index:400;display:flex;align-items:center;justify-content:center;
+    padding:1rem;background:var(--bg);
+    transition:opacity .3s ease;
+  }
+  #login-gate.hide{opacity:0;pointer-events:none;}
+  #login-gate.hide .login-card{transform:translateY(10px) scale(.98);}
+  .login-card{
+    width:100%;max-width:380px;background:var(--surface);border:1px solid var(--border);
+    border-top:4px solid var(--gold);
+    border-radius:1.25rem;box-shadow:var(--shadow);padding:2rem 1.5rem;text-align:center;
+    transition:transform .3s ease;
+    animation:modalIn .35s ease-out both;
+  }
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+  .login-card.shake{animation:shake .3s ease;}
+  #login-err{display:none;color:#dc2626;font-size:11px;font-weight:700;margin-top:.6rem;}
+  #login-err.show{display:block;}
+
+  ::-webkit-scrollbar{width:8px;height:8px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:10px;border:2px solid transparent;background-clip:content-box;}
+  ::-webkit-scrollbar-thumb:hover{background:#94a3b8;border:2px solid transparent;background-clip:content-box;}
+  html.dark ::-webkit-scrollbar-thumb{background:#334155;border:2px solid transparent;background-clip:content-box;}
+
+  @media(max-width:400px){ .metric-value{font-size:1.35rem;} }
+  </style>
+  </head>
+
+  <body>
+  <div class="orbs" aria-hidden="true"></div>
+
+  <!-- ===================== LOGIN GATE ===================== -->
+  <div id="login-gate" role="dialog" aria-label="Login R-LAB">
+    <div class="login-card" id="login-card">
+      <img src="logo.png" alt="Logo R-LAB" class="w-20 h-20 rounded-2xl mx-auto mb-3" style="object-fit:cover;border:1px solid var(--border)">
+      <p class="font-display font-extrabold text-xl">R-LAB</p>
+      <p class="text-[11px] t-muted mt-1 mb-5" data-i18n="login.sub">Pilih cara masuk untuk melanjutkan.</p>
+
+      <button onclick="window.loginGuest()" class="btn-ghost w-full py-3 text-xs flex items-center justify-center gap-2 min-h-[46px]">
+        <i class="fas fa-eye"></i><span data-i18n="login.guest">Masuk sebagai Guest</span>
+      </button>
+
+      <div class="flex items-center gap-3 my-4">
+        <div class="h-px flex-1" style="background:var(--border)"></div>
+        <span class="text-[10px] font-bold t-muted">ATAU</span>
+        <div class="h-px flex-1" style="background:var(--border)"></div>
+      </div>
+
+      <input type="password" id="admin-pass" placeholder="Password admin..." class="inp mb-2.5 text-center" autocomplete="current-password" onkeydown="if(event.key==='Enter')window.loginAdmin()">
+      <button onclick="window.loginAdmin()" class="btn-primary w-full py-3 text-xs flex items-center justify-center gap-2 min-h-[46px]">
+        <i class="fas fa-lock"></i><span data-i18n="login.admin">Masuk Admin</span>
+      </button>
+      <p id="login-err" data-i18n="login.err">Password salah, coba lagi.</p>
+    </div>
+  </div>
+
+  <div id="app-shell" class="pos-left">
+
+    <!-- ===================== SIDEBAR ===================== -->
+    <aside id="sidebar">
+      <div class="flex items-center gap-3 px-1">
+        <img src="logo.png" alt="Logo R-LAB" class="w-10 h-10 rounded-xl shrink-0" style="object-fit:cover;border:1px solid var(--border)">
+        <div class="leading-tight">
+          <p class="font-display font-extrabold text-[15px]">R-LAB</p>
+          <p class="text-[10px] font-semibold t-muted" data-i18n="brand.tag">Smart Sorting System</p>
+        </div>
+      </div>
+
+      <nav class="flex flex-col gap-1.5 mt-2">
+        <button onclick="window.showPage('dash')" id="nav-dash" class="sidebar-btn active">
+          <i class="fas fa-chart-line"></i><span data-i18n="nav.dash">Factory Dashboard</span>
+        </button>
+        <button onclick="window.showPage('team')" id="nav-team" class="sidebar-btn">
+          <i class="fas fa-users"></i><span data-i18n="nav.team">R-LAB Team</span>
+        </button>
+        <button onclick="window.showPage('help')" id="nav-help" class="sidebar-btn">
+          <i class="fas fa-diagram-project"></i><span data-i18n="nav.arch">Architecture</span>
+        </button>
+      </nav>
+
+      <div class="mt-auto flex flex-col gap-2">
+        <button onclick="window.openModal('settings-modal')" class="sidebar-btn">
+          <i class="fas fa-sliders"></i><span data-i18n="nav.settings">Settings</span>
+        </button>
+        <div class="rounded-xl p-4 border" style="background:var(--surface-soft);border-color:var(--border)">
+          <p class="text-[10px] font-bold" style="color:var(--brand)">Developer Team</p>
+          <p class="font-display text-sm font-bold mt-1">R-LAB</p>
+          <p class="text-[11px] t-muted mt-1 leading-relaxed" data-i18n="brand.teamLine">Robotics · AI · Web Engineering</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ===================== MAIN ===================== -->
+    <main class="main-area">
+      <header class="topbar">
+        <button id="btn-menu" class="icon-btn" aria-label="Buka menu navigasi" aria-expanded="false" onclick="window.toggleDrawer(true)">
+          <i class="fas fa-bars text-sm"></i>
+        </button>
+        <img src="logo.png" alt="Logo R-LAB" class="w-9 h-9 rounded-lg shrink-0 lg:hidden" style="object-fit:cover;border:1px solid var(--border)">
+
+        <div class="status-group" role="status" aria-label="Status koneksi">
+          <div id="status-bt" class="pill">BT: OFFLINE</div>
+          <div id="status-fb" class="pill">FB: OFFLINE</div>
+          <div id="status-tm" class="pill">AI: STANDBY</div>
+        </div>
+
+        <div class="topbar-actions">
+          <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl border" style="background:var(--surface-soft);border-color:var(--border)">
+            <i class="fas fa-clock text-[10px]" style="color:var(--brand)"></i>
+            <span id="live-clock" class="font-mono text-xs font-bold">00:00:00</span>
+          </div>
+
+          <button id="btn-open-fb" class="icon-btn" title="Firebase Configuration">
+            <i class="fas fa-database text-xs"></i>
+          </button>
+
+          <button id="btn-conn-bt" class="btn-primary px-3 py-2 text-[10px] flex items-center gap-2">
+            <i class="fab fa-bluetooth-b"></i><span class="hidden sm:inline" data-i18n="btn.connect">CONNECT</span>
+          </button>
+
+          <button id="btn-dis-bt" disabled class="icon-btn danger" title="Disconnect">
+            <i class="fas fa-xmark text-xs"></i>
+          </button>
+
+        <button onclick="window.logoutAdmin()" class="icon-btn" title="Back to Home">
+          <i class="fas fa-house text-xs"></i>
+        </button>
+        <button onclick="window.openModal('settings-modal')" class="icon-btn" title="Settings">
+          <i class="fas fa-gear text-xs"></i>
+        </button>
+        </div>
+      </header>
+
+      <div class="scroll-area">
+
+        <!-- ============ PAGE: DASHBOARD ============ -->
+        <section id="page-dash" class="page active">
+          <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-5">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="live-dot"></span>
+                <span class="text-[9px] font-black uppercase tracking-[.2em]" style="color:var(--brand)">Live Production</span>
+              </div>
+              <h1 class="text-xl md:text-2xl font-black tracking-tight" data-i18n="dash.title">AI Smart Factory Dashboard</h1>
+              <p class="text-xs t-muted mt-1" data-i18n="dash.sub">Real-time object sorting analytics.</p>
+            </div>
+            <div class="flex items-center gap-2 sm:hidden">
+              <span id="live-clock-m" class="font-mono text-sm font-bold">00:00:00</span>
+            </div>
+          </div>
+
+          <div class="card p-4 mb-5 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+            <div class="flex items-center gap-2.5 w-full sm:w-auto">
+              <label class="text-[10px] font-black uppercase tracking-[.12em] t-muted whitespace-nowrap" data-i18n="dash.mode">Sorting Mode</label>
+              <select id="mode-selector" onchange="window.changeSortingMode(this.value)" class="inp flex-1 sm:flex-none !py-2.5 !px-3 cursor-pointer sm:!w-auto min-h-[44px]">
+                <option value="Servo" data-i18n="dash.modeServo">🤖 Servo Mode</option>
+                <option value="Arm" data-i18n="dash.modeArm">🦾 Arm Mode</option>
+              </select>
+            </div>
+            <button onclick="window.openExportModal()" class="btn-primary w-full sm:w-auto px-4 py-3 sm:py-2.5 text-[12px] sm:text-[11px] flex items-center justify-center gap-2 min-h-[44px]">
+              <i class="fas fa-file-export"></i><span data-i18n="btn.export">Export Report</span>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 mb-5">
+            <div class="card card-hover p-4 sm:p-5">
+              <div class="metric-icon" style="background:var(--gold-soft);color:#8a6d1f"><i class="fas fa-boxes-stacked"></i></div>
+              <p class="metric-label" data-i18n="metric.total">Total Processed</p>
+              <p id="stat-total" class="metric-value mt-1" style="color:var(--brand)">0</p>
+            </div>
+            <div class="card card-hover p-4 sm:p-5">
+              <div class="metric-icon" style="background:#fef3c7;color:#b45309"><i class="fas fa-circle"></i></div>
+              <p class="metric-label" data-i18n="metric.yellow">Kuning</p>
+              <p id="stat-kuning" class="metric-value mt-1 t-main">0</p>
+            </div>
+            <div class="card card-hover p-4 sm:p-5">
+              <div class="metric-icon" style="background:#dbe4f5;color:#1a2456"><i class="fas fa-circle"></i></div>
+              <p class="metric-label" data-i18n="metric.blue">Biru</p>
+              <p id="stat-biru" class="metric-value mt-1 t-main">0</p>
+            </div>
+            <div class="card card-hover p-4 sm:p-5">
+              <div class="metric-icon" style="background:#fee2e2;color:#b91c1c"><i class="fas fa-circle"></i></div>
+              <p class="metric-label" data-i18n="metric.red">Merah</p>
+              <p id="stat-merah" class="metric-value mt-1 t-main">0</p>
+            </div>
+            <div class="card card-hover p-4 sm:p-5 col-span-2 md:col-span-1" style="border-color:#fecaca">
+              <div class="metric-icon" style="background:#fef2f2;color:#dc2626"><i class="fas fa-triangle-exclamation"></i></div>
+              <p class="metric-label" data-i18n="metric.error">Error</p>
+              <p id="stat-error" class="metric-value mt-1" style="color:#dc2626">0</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-5 mb-5">
+            <div class="card p-4 sm:p-5 flex flex-col">
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="card-title"><i class="fas fa-camera-retro"></i><span data-i18n="vision.title">AI Vision</span></h3>
+                <span class="live-dot"></span>
+              </div>
+
+              <input type="text" id="tm-url-input" data-i18n-ph="vision.ph" placeholder="Teachable Machine Model URL..." value="https://teachablemachine.withgoogle.com/models/j0nanBWFa/" class="inp mb-2.5">
+
+            <div class="flex gap-2 mb-3">
+              <button id="btn-start-tm" onclick="initTM()" class="btn-primary flex-1 py-3 sm:py-2.5 text-[12px] sm:text-[11px] min-h-[44px]">START AI</button>
+              <button id="btn-pause-ai" onclick="togglePause()" disabled class="btn-warn flex-1 py-3 sm:py-2.5 text-[12px] sm:text-[11px] hidden min-h-[44px]">PAUSE</button>
+            </div>
+
+            <div class="flex gap-2 mb-3 flex-wrap">
+              <span id="status-cam" class="pill">CAM: OFFLINE</span>
+              <span id="status-fps" class="pill">FPS: —</span>
+            </div>
+
+            <div id="webcam-container" class="webcam-wrap mb-3">
+                <div class="text-center px-4 py-8">
+                  <i class="fas fa-video text-2xl mb-2 t-muted opacity-50"></i>
+                  <p class="text-[11px] t-muted font-semibold" data-i18n="vision.standby">Kamera Siaga</p>
+                </div>
+                <div id="pause-overlay">
+                  <i class="fas fa-pause-circle text-white text-3xl"></i>
+                  <span class="text-white font-bold text-[11px]" data-i18n="vision.pausedOverlay">Sistem Dijeda Sementara</span>
+                </div>
+              </div>
+
+              <div id="label-container" class="space-y-1.5 mb-3"></div>
+
+              <div class="flex gap-2">
+                <button onclick="stopCamera()" class="btn-ghost flex-1 py-2.5 text-[11px] flex items-center justify-center gap-2">
+                  <i class="fas fa-stop"></i> Stop Camera
+                </button>
+                <button onclick="logDetection()" class="btn-ghost flex-1 py-2.5 text-[11px] flex items-center justify-center gap-2">
+                  <i class="fas fa-crosshairs"></i> Log Detection
+                </button>
+              </div>
+
+              <div class="mt-3 pt-3 border-t" style="border-color:var(--border)">
+                <p class="text-[10px] font-black uppercase tracking-[.13em] t-muted mb-1">Deteksi Terakhir</p>
+                <p id="last-detect" class="text-[12px] font-bold t-muted italic">Belum ada</p>
+              </div>
+            </div>
+
+            <div class="xl:col-span-2 flex flex-col gap-4 sm:gap-5">
+              <div class="card p-4 sm:p-5">
+                <h3 class="card-title mb-4"><i class="fas fa-chart-column"></i><span data-i18n="chart.title">Sorting Distribution</span></h3>
+                <div class="h-[210px] sm:h-[240px]"><canvas id="sortingChart"></canvas></div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+              <div class="card p-4 sm:p-5">
+                <h3 class="card-title mb-3"><i class="fas fa-sliders"></i><span data-i18n="qc.title">Manual QC &amp; Control</span></h3>
+                <div class="flex flex-col gap-2">
+                  <button onclick="window.logMissort()" class="btn-ghost w-full py-2.5 text-[11px] flex items-center justify-center gap-2">
+                    <i class="fas fa-triangle-exclamation" style="color:#f97316"></i>
+                    <span data-i18n="qc.missort">Log Miss-sort</span>
+                    (<span id="stat-gagal" class="font-black">0</span> <span data-i18n="qc.error">Error</span>)
+                  </button>
+                  <button onclick="window.forceTimeout()" class="btn-ghost w-full py-2.5 text-[11px] flex items-center justify-center gap-2">
+                    <i class="fas fa-forward" style="color:#a855f7"></i><span data-i18n="qc.force">Force Timeout</span>
+                  </button>
+                </div>
+              </div>
+                <div class="card p-4 sm:p-5 flex flex-col justify-end">
+                  <h3 class="card-title mb-3"><i class="fas fa-database"></i><span data-i18n="qc.system">System</span></h3>
+                  <button onclick="window.resetData()" class="w-full py-2.5 text-[11px] font-bold rounded-xl transition flex items-center justify-center gap-2"
+                          style="background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.28)">
+                    <i class="fas fa-rotate-left"></i><span data-i18n="qc.reset">Reset Database</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card p-4 sm:p-5">
+            <h3 class="card-title mb-3"><i class="fas fa-clock-rotate-left"></i><span data-i18n="log.title">Live History</span></h3>
+            <div class="space-y-2 max-h-[320px] overflow-y-auto pr-1" id="log-panel">
+              <p class="text-[11px] t-muted italic" data-i18n="log.empty">Belum ada aktivitas.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ PAGE: TEAM ============ -->
+        <section id="page-team" class="page">
+          <div class="text-center max-w-3xl mx-auto mb-8 sm:mb-12">
+            <p class="text-[11px] font-bold mb-2" style="color:var(--brand)" data-i18n="team.eyebrow">The Team Behind The Machine</p>
+            <h1 class="font-display text-[2rem] leading-none sm:text-5xl font-extrabold mb-3 t-main">R-LAB</h1>
+            <p class="text-xs sm:text-sm t-muted leading-relaxed max-w-xl mx-auto" data-i18n="team.desc">
+              A synergy of mechanics, artificial intelligence and electronics — building an autonomous smart sorting system for the international stage.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 max-w-5xl mx-auto">
+            <div class="team-card" style="--c1:#b45309">
+              <div class="team-avatar">HA</div>
+              <h3 class="font-bold text-base t-main">Hamzah Aufa Ibrahim</h3>
+              <span class="role-chip" data-i18n="team.role1">Mekanik</span>
+              <p class="text-[12px] t-muted mt-3 leading-relaxed" data-i18n="team.desc1">Mechanical design, chassis fabrication and sorting actuator assembly.</p>
+            </div>
+
+            <div class="team-card" style="--c1:#1a2456">
+              <div class="team-avatar">MA</div>
+              <h3 class="font-bold text-base t-main">Muhammad Alif Al Hafidz</h3>
+              <span class="role-chip" data-i18n="team.role2">Programmer Website dan AI</span>
+              <p class="text-[12px] t-muted mt-3 leading-relaxed" data-i18n="team.desc2">Dashboard engineering, real-time data pipeline and computer-vision model training.</p>
+            </div>
+
+            <div class="team-card" style="--c1:#97742a">
+              <div class="team-avatar">NA</div>
+              <h3 class="font-bold text-base t-main">Ahmad Bilal Alfatih</h3>
+              <span class="role-chip" data-i18n="team.role3">Programmer Code Otak Robot dan Elektronika</span>
+              <p class="text-[12px] t-muted mt-3 leading-relaxed" data-i18n="team.desc3">Embedded firmware, micro:bit UART protocol and electronic wiring.</p>
+            </div>
+          </div>
+
+          <div class="card p-6 max-w-5xl mx-auto mt-8 text-center">
+            <p class="font-display text-xs font-bold" style="color:var(--brand)">R-LAB · 2026</p>
+            <p class="text-[11px] t-muted mt-2" data-i18n="team.footer">Engineered for the International Robotics &amp; AI Competition.</p>
+          </div>
+        </section>
+
+        <!-- ============ PAGE: ARCHITECTURE ============ -->
+        <section id="page-help" class="page">
+          <h1 class="text-xl md:text-2xl font-black mb-1" data-i18n="arch.title">System Architecture</h1>
+          <p class="text-xs t-muted mb-6" data-i18n="arch.sub">How data travels from the camera to the cloud.</p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
+            <div class="card card-hover p-5">
+              <div class="metric-icon" style="background:rgba(59,130,246,.15);color:var(--brand)"><i class="fas fa-eye"></i></div>
+              <h3 class="font-bold text-sm mb-2">1 · Computer Vision</h3>
+              <p class="text-[11px] t-muted leading-relaxed">TensorFlow.js + Teachable Machine classify every object in the browser with a confidence threshold of 85%.</p>
+            </div>
+            <div class="card card-hover p-5">
+              <div class="metric-icon" style="background:rgba(6,182,212,.15);color:#06b6d4"><i class="fab fa-bluetooth-b"></i></div>
+              <h3 class="font-bold text-sm mb-2">2 · BLE UART Bridge</h3>
+              <p class="text-[11px] t-muted leading-relaxed">Web Bluetooth writes the detected colour to the Nordic UART TX characteristic of the BBC micro:bit.</p>
+            </div>
+            <div class="card card-hover p-5">
+              <div class="metric-icon" style="background:rgba(168,85,247,.15);color:#a855f7"><i class="fas fa-microchip"></i></div>
+              <h3 class="font-bold text-sm mb-2">3 · Robot Brain</h3>
+              <p class="text-[11px] t-muted leading-relaxed">The micro:bit drives the servo/arm, then echoes the colour back as a handshake confirmation.</p>
+            </div>
+            <div class="card card-hover p-5">
+              <div class="metric-icon" style="background:rgba(34,197,94,.15);color:#22c55e"><i class="fas fa-check-double"></i></div>
+              <h3 class="font-bold text-sm mb-2">4 · Handshake &amp; QC</h3>
+              <p class="text-[11px] t-muted leading-relaxed">A 12-second watchdog timer flags any missing acknowledgement as a timeout error for quality control.</p>
+            </div>
+            <div class="card card-hover p-5">
+              <div class="metric-icon" style="background:rgba(234,179,8,.15);color:#eab308"><i class="fas fa-fire"></i></div>
+              <h3 class="font-bold text-sm mb-2">5 · Realtime Database</h3>
+              <p class="text-[11px] t-muted leading-relaxed">Firebase RTDB stores each event with a timestamp; every connected dashboard stays in sync instantly.</p>
+            </div>
+            <div class="card card-hover p-5">
+              <div class="metric-icon" style="background:rgba(239,68,68,.15);color:#ef4444"><i class="fas fa-file-export"></i></div>
+              <h3 class="font-bold text-sm mb-2">6 · Rich Reporting</h3>
+              <p class="text-[11px] t-muted leading-relaxed">Styled XLSX, PDF and DOCX reports with the R-LAB header, colour-coded rows and full summaries.</p>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+
+    <!-- ===================== TOP BAR NAV (DESKTOP mode Atas) ===================== -->
+    <nav id="bottombar" aria-label="Navigasi desktop mode atas">
+      <div class="bottom-brand">
+        <img src="logo.png" alt="Logo R-LAB" class="brand-logo" style="object-fit:cover;padding:0;border:1px solid var(--border)">
+        <div class="brand-text">
+          <span class="brand-name">R-LAB</span>
+          <span class="brand-sub" data-i18n="brand.tag">Smart Sorting System</span>
+        </div>
+      </div>
+
+      <div class="bottom-tabs">
+        <button onclick="window.showPage('dash')" id="bnav-dash" class="tab-btn active">
+          <i class="fas fa-chart-line"></i><span data-i18n="nav.dashShort">Dashboard</span>
+        </button>
+        <button onclick="window.showPage('team')" id="bnav-team" class="tab-btn">
+          <i class="fas fa-users"></i><span data-i18n="nav.teamShort">Team</span>
+        </button>
+        <button onclick="window.showPage('help')" id="bnav-help" class="tab-btn">
+          <i class="fas fa-diagram-project"></i><span data-i18n="nav.archShort">System</span>
+        </button>
+        <button onclick="window.openModal('settings-modal')" class="tab-btn">
+          <i class="fas fa-sliders"></i><span data-i18n="nav.settingsShort">Settings</span>
+        </button>
+      </div>
+
+      <div class="bottom-spacer">
+        <span class="live-dot"></span>
+        <span class="text-[11px] font-bold t-muted">Live</span>
+      </div>
+    </nav>
+  </div>
+
+  <!-- ===================== MOBILE DRAWER MENU ===================== -->
+  <div id="drawer-backdrop" onclick="window.toggleDrawer(false)"></div>
+  <aside id="mobile-drawer" aria-hidden="true" aria-label="Menu navigasi seluler">
+    <div class="flex items-center gap-3">
+      <img src="logo.png" alt="Logo R-LAB" class="w-10 h-10 rounded-xl shrink-0" style="object-fit:cover;border:1px solid var(--border)">
+      <div class="leading-tight flex-1">
+        <p class="font-display font-extrabold text-[15px]">R-LAB</p>
+        <p class="text-[10px] font-semibold t-muted" data-i18n="brand.tag">Smart Sorting System</p>
+      </div>
+      <button class="icon-btn" aria-label="Tutup menu" onclick="window.toggleDrawer(false)">
+        <i class="fas fa-xmark text-xs"></i>
+      </button>
+    </div>
+
+    <div class="flex items-center gap-2 px-3 py-2.5 rounded-xl border" style="background:var(--surface-soft);border-color:var(--border)">
+      <span class="live-dot"></span>
+      <span class="text-[10px] font-black uppercase tracking-[.15em]" style="color:var(--brand)">Live Production</span>
+      <span id="live-clock-drawer" class="font-mono text-[11px] font-bold ml-auto">00:00:00</span>
+    </div>
+
+    <nav class="flex flex-col gap-1.5" aria-label="Menu utama">
+      <button onclick="window.showPage('dash')" id="mnav-dash" class="mnav-btn active">
+        <i class="fas fa-chart-line"></i><span data-i18n="nav.dash">Factory Dashboard</span>
+      </button>
+      <button onclick="window.showPage('team')" id="mnav-team" class="mnav-btn">
+        <i class="fas fa-users"></i><span data-i18n="nav.team">R-LAB Team</span>
+      </button>
+      <button onclick="window.showPage('help')" id="mnav-help" class="mnav-btn">
+        <i class="fas fa-diagram-project"></i><span data-i18n="nav.arch">Architecture</span>
+      </button>
+    </nav>
+
+    <div class="h-px" style="background:var(--border)"></div>
+
+    <div class="flex flex-col gap-1.5">
+      <button onclick="window.toggleDrawer(false);window.openModal('settings-modal')" class="mnav-btn">
+        <i class="fas fa-sliders"></i><span data-i18n="nav.settings">Settings</span>
+      </button>
+      <button onclick="window.toggleDrawer(false);document.getElementById('btn-open-fb')?.click()" class="mnav-btn">
+        <i class="fas fa-database"></i><span>Connect Database</span>
+      </button>
+      <button onclick="window.toggleDrawer(false);window.openExportModal()" class="mnav-btn">
+        <i class="fas fa-file-export"></i><span data-i18n="btn.export">Export Report</span>
+      </button>
+    </div>
+
+    <div class="mt-auto rounded-xl p-4 border" style="background:var(--surface-soft);border-color:var(--border)">
+      <p class="text-[10px] font-bold" style="color:var(--brand)">Developer Team</p>
+      <p class="font-display text-sm font-bold mt-1">R-LAB</p>
+      <p class="text-[11px] t-muted mt-1 leading-relaxed" data-i18n="brand.teamLine">Robotics · AI · Web Engineering</p>
+    </div>
+  </aside>
+
+  <!-- ===================== MODAL: SETTINGS ===================== -->
+  <div id="settings-modal" class="modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-panel">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="font-black text-base flex items-center gap-2"><i class="fas fa-sliders" style="color:var(--brand)"></i><span data-i18n="set.title">Settings</span></h3>
+        <button onclick="window.closeModal('settings-modal')" class="icon-btn"><i class="fas fa-xmark text-xs"></i></button>
+      </div>
+
+      <div class="mb-5">
+        <p class="text-[10px] font-black uppercase tracking-[.15em] t-muted mb-2" data-i18n="set.language">Language</p>
+        <div class="seg" id="lang-seg">
+          <button data-lang="id" onclick="window.setLanguage('id')">🇮🇩 Indonesia</button>
+          <button data-lang="en" onclick="window.setLanguage('en')">🇬🇧 English</button>
+        </div>
+      </div>
+
+      <div class="mb-5 flex items-center justify-between p-4 rounded-2xl border" style="background:var(--surface-soft);border-color:var(--border)">
+        <div>
+          <p class="text-xs font-bold" data-i18n="set.theme">Dark Mode</p>
+          <p class="text-[10px] t-muted mt-0.5" data-i18n="set.themeSub">Toggle the futuristic dark interface</p>
+        </div>
+        <button id="theme-switch" class="switch" onclick="window.toggleTheme()"></button>
+      </div>
+
+      <div class="mb-2">
+        <p class="text-[11px] font-bold t-muted mb-2" data-i18n="set.bar">Navigation Position</p>
+        <div class="seg" id="bar-seg">
+          <button data-pos="left" onclick="window.setBarPosition('left')"><i class="fas fa-arrow-left mr-1"></i> <span data-i18n="set.barLeft">Left</span></button>
+          <button data-pos="right" onclick="window.setBarPosition('right')"><i class="fas fa-arrow-right mr-1"></i> <span data-i18n="set.barRight">Right</span></button>
+          <button data-pos="top" onclick="window.setBarPosition('top')"><i class="fas fa-arrow-up mr-1"></i> <span data-i18n="set.barTop">Top</span></button>
+        </div>
+        <p class="text-[11px] t-muted mt-2 leading-relaxed">
+          <i class="fas fa-circle-info mr-1"></i>
+          <span data-i18n="set.barHint">HP selalu memakai menu drawer (tombol ☰). Posisi Kiri/Kanan/Atas hanya berlaku di laptop/desktop ≥1024px.</span>
+        </p>
+      </div>
+
+      <div class="mt-6 pt-5 border-t flex items-center justify-between" style="border-color:var(--border)">
+        <p class="text-[10px] t-muted font-bold">R-LAB · v2.1</p>
+        <button onclick="window.openModal('team-modal')" class="btn-primary px-4 py-2 text-[10px]">
+          <i class="fas fa-users mr-1"></i> <span data-i18n="set.viewTeam">View Team</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== MODAL: CONNECT TO DATABASE ===================== -->
+  <div id="fb-modal" class="modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-panel">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="font-black text-base flex items-center gap-2"><i class="fas fa-database" style="color:var(--brand)"></i><span data-i18n="fb.title">Connect to Database</span></h3>
+        <button onclick="window.closeModal('fb-modal')" class="icon-btn"><i class="fas fa-xmark text-xs"></i></button>
+      </div>
+
+      <div class="rounded-xl p-4 border space-y-2 text-[12px]" style="background:var(--surface-soft);border-color:var(--border)">
+        <p class="t-muted">Database</p>
+        <p class="font-mono text-[11px] font-bold t-main break-all">smart-factory-ai-7b576-default-rtdb.asia-southeast1.firebasedatabase.app</p>
+        <p class="t-muted">Path</p>
+        <p class="font-mono text-[11px] font-bold t-main">smart_factory/sorting_line</p>
+        <p class="t-muted pt-1" data-i18n="fb.hint">Klik tombol di bawah sampai status FB berwarna hijau. Data &amp; export diambil sepenuhnya dari database.</p>
+      </div>
+
+      <button id="btn-conn-fb" class="btn-primary w-full py-3.5 text-xs mt-5 min-h-[48px]">
+        <i class="fas fa-plug mr-2"></i><span data-i18n="fb.connect">CONNECT TO DATABASE</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ===================== MODAL: EXPORT ===================== -->
+  <div id="export-modal" class="modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-panel">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-black text-base flex items-center gap-2"><i class="fas fa-file-export" style="color:var(--brand)"></i><span data-i18n="exp.title">Export Report</span></h3>
+        <button onclick="window.closeModal('export-modal')" class="icon-btn"><i class="fas fa-xmark text-xs"></i></button>
+      </div>
+
+      <div class="grid grid-cols-3 sm:grid-cols-5 gap-2.5 mb-5 p-3 rounded-2xl border" style="background:var(--surface-soft);border-color:var(--border)">
+        <div class="text-center">
+          <p class="metric-label" data-i18n="metric.total">Total</p>
+          <p id="exp-total" class="text-lg font-black" style="color:var(--brand)">0</p>
+        </div>
+        <div class="text-center">
+          <p class="metric-label" data-i18n="metric.yellow">Kuning</p>
+          <p id="exp-kuning" class="text-lg font-black" style="color:#b45309">0</p>
+        </div>
+        <div class="text-center">
+          <p class="metric-label" data-i18n="metric.blue">Biru</p>
+          <p id="exp-biru" class="text-lg font-black" style="color:#2b4b9b">0</p>
+        </div>
+        <div class="text-center">
+          <p class="metric-label" data-i18n="metric.red">Merah</p>
+          <p id="exp-merah" class="text-lg font-black" style="color:#b91c1c">0</p>
+        </div>
+        <div class="text-center col-span-3 sm:col-span-1 rounded-xl py-1" style="background:#fef2f2;border:1px solid #fecaca">
+          <p class="metric-label" data-i18n="metric.error">Error</p>
+          <p id="exp-gagal" class="text-lg font-black" style="color:#dc2626">0</p>
+        </div>
+      </div>
+
+      <p class="text-[10px] font-black uppercase tracking-[.15em] t-muted mb-3" data-i18n="exp.choose">Choose a format</p>
+
+      <div class="grid grid-cols-3 gap-2 sm:gap-3">
+        <button class="export-tile" onclick="window.doExport('xlsx')">
+          <i class="fas fa-file-excel" style="color:#16a34a"></i><span>Excel</span><small>.XLSX · COLORED</small>
+        </button>
+        <button class="export-tile" onclick="window.doExport('pdf')">
+          <i class="fas fa-file-pdf" style="color:#dc2626"></i><span>PDF</span><small>.PDF · PRINT READY</small>
+        </button>
+        <button class="export-tile" onclick="window.doExport('csv')">
+          <i class="fas fa-file-csv" style="color:#0891b2"></i><span>CSV</span><small>.CSV · RAW DATA</small>
+        </button>
+      </div>
+
+      <p class="text-[10px] t-muted mt-4 text-center leading-relaxed" data-i18n="exp.note">
+        Reports include the R-LAB header, sorting summary, timestamps and colour-coded rows.
+      </p>
+    </div>
+  </div>
+
+  <!-- ===================== MODAL: TEAM ===================== -->
+  <div id="team-modal" class="modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-panel !max-w-3xl">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="font-display font-extrabold text-lg t-main">R-LAB</h3>
+        <button onclick="window.closeModal('team-modal')" class="icon-btn"><i class="fas fa-xmark text-xs"></i></button>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="team-card" style="--c1:#b45309">
+          <div class="team-avatar" style="width:52px;height:52px;font-size:1rem">HA</div>
+          <h3 class="font-bold text-sm t-main">Hamzah Aufa Ibrahim</h3>
+          <span class="role-chip" data-i18n="team.role1">Mekanik</span>
+        </div>
+        <div class="team-card" style="--c1:#1a2456">
+          <div class="team-avatar" style="width:52px;height:52px;font-size:1rem">MA</div>
+          <h3 class="font-bold text-sm t-main">Muhammad Alif Al Hafidz</h3>
+          <span class="role-chip" data-i18n="team.role2">Programmer Website dan AI</span>
+        </div>
+        <div class="team-card" style="--c1:#97742a">
+          <div class="team-avatar" style="width:52px;height:52px;font-size:1rem">NA</div>
+          <h3 class="font-bold text-sm t-main">Ahmad Bilal Alfatih</h3>
+          <span class="role-chip" data-i18n="team.role3">Programmer Code Otak Robot dan Elektronika</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== JARVIS ===================== -->
+  <button id="jarvis-fab" aria-label="Buka R-AI" onclick="window.jarvisToggle()"><i class="fas fa-robot"></i></button>
+  <div id="jarvis-panel" role="dialog" aria-label="R-AI R-LAB">
+    <div class="jarvis-head">
+      <img src="logo.png" alt="R-LAB">
+      <div class="t"><b>R-AI</b><small id="jarvis-sub">Asisten AI dari R-LAB · siap membantu</small></div>
+      <button class="icon-btn" id="jarvis-voice-btn" title="Suara on/off" onclick="window.jarvisSpeakerToggle()" style="width:32px;height:32px;"><i class="fas fa-volume-up text-xs"></i></button>
+      <button class="icon-btn" title="Tutup" onclick="window.jarvisToggle(false)" style="width:32px;height:32px;"><i class="fas fa-xmark text-xs"></i></button>
+    </div>
+    <div class="jarvis-msgs" id="jarvis-msgs"></div>
+    <div class="jarvis-chips" id="jarvis-chips"></div>
+    <div class="jarvis-input">
+      <button class="icon-btn" id="jarvis-mic" title="Bicara" onclick="window.jarvisListen()"><i class="fas fa-microphone text-xs"></i></button>
+      <input type="text" id="jarvis-text" class="inp" placeholder="Tanya / perintah R-AI..." autocomplete="off" onkeydown="if(event.key==='Enter')window.jarvisSend()">
+      <button class="btn-primary px-3" title="Kirim" onclick="window.jarvisSend()"><i class="fas fa-paper-plane text-xs"></i></button>
+    </div>
+  </div>
+
+  <!-- ===================== TOAST ===================== -->
+  <div id="toast"><div class="toast-inner"><i class="fas fa-circle-info" style="color:#60a5fa"></i><span id="toast-msg">Initialized!</span></div></div>
+
+  <!-- ==================================================================== -->
+  <!-- ============================ APP SCRIPT ============================= -->
+  <!-- ==================================================================== -->
+  <script src="rai-knowledge.js"></script>
+  <script type="module">
+  import { initializeApp, getApps, deleteApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+  import { getDatabase, ref, onValue, update, set } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+
+  /* ------------------------------------------------------------------ */
+  /*  BLE UART UUIDs                                                     */
+  /* ------------------------------------------------------------------ */
+  const UART_SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+  const UART_TX_CHARACTERISTIC_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
+  const UART_RX_CHARACTERISTIC_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
+
+  /* ------------------------------------------------------------------ */
+  /*  STATE                                                              */
+  /* Password admin — ganti sesuai kebutuhan */
+  const ADMIN_PASS = "098765";
+
+  /* Database bawaan — samakan guest, tanpa isi form */
+  const FB_CONFIG = {
+    apiKey: "AIzaSyAVwURHeateFtCSNuzLH69Gt3nkjXdEXzM",
+    databaseURL: "https://smart-factory-ai-7b576-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "smart-factory-ai-7b576"
+  };
+  const FB_PATH = "smart_factory/sorting_line";
+
+  /* ------------------------------------------------------------------ */
+  const state = {
+    db: null, currentPath: "", unsubscribe: null, dbData: null,
+    device: null, txChar: null, rxChar: null, bleConnected: false, bleBuffer: "",
+    sortingData: { kuning: 0, biru: 0, merah: 0, gagal: 0, total: 0 },
+    excelLogs: [],
+    feed: [],
+    chart: null,
+    chartYMax: 5,
+    isCoolingDown: false,
+    pendingDetection: null,
+    pendingStartTime: null,
+    pendingMode: null,
+    isPaused: false,
+    timeoutTimer: null,
+    lang: 'id', theme: 'light', barPos: 'left', aiReady: false,
+    fps: 0, _frameCount: 0, _fpsTimer: 0, lastDetection: null
+  };
+
+  const $ = (id) => document.getElementById(id);
+
+  /* ------------------------------------------------------------------ */
+  /*  i18n                                                               */
+  /* ------------------------------------------------------------------ */
+  const I18N = {
+    id: {
+      'brand.tag':'Smart Sorting System','brand.teamLine':'Robotika · AI · Web Engineering',
+      'nav.dash':'Dasbor Pabrik','nav.dashShort':'Dasbor','nav.team':'Tim R-LAB','nav.teamShort':'Tim',
+      'nav.arch':'Arsitektur','nav.archShort':'Sistem','nav.settings':'Pengaturan','nav.settingsShort':'Setelan',
+      'btn.connect':'HUBUNGKAN','btn.export':'Ekspor Laporan',
+      'dash.title':'Dasbor Pabrik Pintar AI','dash.sub':'Analitik penyortiran objek secara real-time.',
+      'dash.mode':'Mode Sortir','dash.modeServo':'Mode Servo','dash.modeArm':'Mode Arm',
+      'metric.total':'Total Diproses','metric.yellow':'Kuning','metric.blue':'Biru','metric.red':'Merah','metric.error':'Error',
+      'vision.title':'AI Vision','vision.ph':'URL Model Teachable Machine...','vision.start':'MULAI AI',
+      'vision.loading':'MEMUAT...','vision.online':'AI AKTIF','vision.pause':'JEDA','vision.resume':'LANJUT',
+      'vision.standby':'Kamera Siaga','vision.pausedOverlay':'Sistem Dijeda Sementara',
+      'chart.title':'Distribusi Penyortiran','qc.title':'QC Manual & Kontrol','qc.missort':'Catat Salah Sortir',
+      'qc.error':'Error','qc.force':'Paksa Timeout','qc.manual':'Input manual — kalau sensor belum detect','qc.system':'Sistem','qc.reset':'Reset Database',
+      'log.title':'Riwayat Langsung','log.empty':'Belum ada aktivitas.',
+      'team.eyebrow':'Tim Di Balik Mesin Ini',
+      'team.desc':'Sinergi antara mekanik, kecerdasan artifisial, dan elektronika — membangun sistem penyortiran cerdas otonom untuk panggung internasional.',
+      'team.role1':'Mekanik','team.role2':'Programmer Website dan AI','team.role3':'Programmer Code Otak Robot dan Elektronika',
+      'team.desc1':'Desain mekanik, fabrikasi chassis, dan perakitan aktuator penyortir.',
+      'team.desc2':'Rekayasa dasbor, pipeline data real-time, dan pelatihan model computer vision.',
+      'team.desc3':'Firmware embedded, protokol UART micro:bit, dan pengkabelan elektronika.',
+      'team.footer':'Dirancang untuk Kompetisi Robotika & AI Internasional.',
+      'arch.title':'Arsitektur Sistem','arch.sub':'Bagaimana data mengalir dari kamera hingga ke cloud.',
+      'set.title':'Pengaturan','set.language':'Bahasa','set.theme':'Mode Gelap','set.themeSub':'Aktifkan tampilan gelap futuristik',
+      'set.bar':'Posisi Navigasi','set.barLeft':'Kiri','set.barRight':'Kanan','set.barTop':'Atas','set.barBottom':'Atas',
+      'set.barHint':'HP selalu memakai menu drawer (tombol ☰). Posisi Kiri/Kanan/Atas hanya berlaku di laptop/desktop ≥1024px.',
+      'set.viewTeam':'Lihat Tim',
+      'fb.title':'Connect to Database','fb.connect':'CONNECT TO DATABASE','fb.connected':'CONNECTED ✓','fb.hint':'Klik tombol di bawah sampai status FB berwarna hijau. Data & export diambil sepenuhnya dari database.',
+      'login.sub':'Pilih cara masuk untuk melanjutkan.','login.guest':'Masuk sebagai Guest','login.admin':'Masuk Admin','login.err':'Password salah, coba lagi.',
+      'exp.title':'Ekspor Laporan','exp.choose':'Pilih format','exp.note':'Laporan mencakup header R-LAB, ringkasan sortir, timestamp, dan baris berwarna.'
+    },
+    en: {
+      'brand.tag':'Smart Sorting System','brand.teamLine':'Robotics · AI · Web Engineering',
+      'nav.dash':'Factory Dashboard','nav.dashShort':'Dashboard','nav.team':'R-LAB Team','nav.teamShort':'Team',
+      'nav.arch':'Architecture','nav.archShort':'System','nav.settings':'Settings','nav.settingsShort':'Settings',
+      'btn.connect':'CONNECT','btn.export':'Export Report',
+      'dash.title':'AI Smart Factory Dashboard','dash.sub':'Real-time object sorting analytics.',
+      'dash.mode':'Sorting Mode','dash.modeServo':'Servo Mode','dash.modeArm':'Arm Mode',
+      'metric.total':'Total Processed','metric.yellow':'Yellow','metric.blue':'Blue','metric.red':'Red','metric.error':'Error',
+      'vision.title':'AI Vision','vision.ph':'Teachable Machine Model URL...','vision.start':'START AI',
+      'vision.loading':'LOADING...','vision.online':'AI ONLINE','vision.pause':'PAUSE','vision.resume':'RESUME',
+      'vision.standby':'Camera Standby','vision.pausedOverlay':'System Temporarily Paused',
+      'chart.title':'Sorting Distribution','qc.title':'Manual QC & Control','qc.missort':'Log Miss-sort',
+      'qc.error':'Error','qc.force':'Force Timeout','qc.manual':'Manual input — when sensor misses','qc.system':'System','qc.reset':'Reset Database',
+      'log.title':'Live History','log.empty':'No activity yet.',
+      'team.eyebrow':'The Team Behind The Machine',
+      'team.desc':'A synergy of mechanics, artificial intelligence and electronics — building an autonomous smart sorting system for the international stage.',
+      'team.role1':'Mechanic','team.role2':'Website & AI Programmer','team.role3':'Robot Brain Code & Electronics Programmer',
+      'team.desc1':'Mechanical design, chassis fabrication and sorting actuator assembly.',
+      'team.desc2':'Dashboard engineering, real-time data pipeline and computer-vision model training.',
+      'team.desc3':'Embedded firmware, micro:bit UART protocol and electronic wiring.',
+      'team.footer':'Engineered for the International Robotics & AI Competition.',
+      'arch.title':'System Architecture','arch.sub':'How data travels from the camera to the cloud.',
+      'set.title':'Settings','set.language':'Language','set.theme':'Dark Mode','set.themeSub':'Enable the futuristic dark interface',
+      'set.bar':'Navigation Position','set.barLeft':'Left','set.barRight':'Right','set.barTop':'Top','set.barBottom':'Top',
+      'set.barHint':'Phones always use the drawer menu (☰ button). Left/Right/Top positions apply to laptop/desktop ≥1024px only.',
+      'set.viewTeam':'View Team',
+      'fb.title':'Connect to Database','fb.connect':'CONNECT TO DATABASE','fb.connected':'CONNECTED ✓','fb.hint':'Click the button below until the FB status turns green. Data & export come fully from the database.',
+      'login.sub':'Choose how to sign in.','login.guest':'Sign in as Guest','login.admin':'Sign in as Admin','login.err':'Wrong password, try again.',
+      'exp.title':'Export Report','exp.choose':'Choose a format','exp.note':'Reports include the R-LAB header, sorting summary, timestamps and colour-coded rows.'
+    }
+  };
+  const t = (k) => (I18N[state.lang] && I18N[state.lang][k]) || k;
+
+  /* ------------------------------------------------------------------ */
+  /*  TIME HELPERS                                                       */
+  /* ------------------------------------------------------------------ */
+  function pad2(n){ return String(n).padStart(2,'0'); }
+  function formatDateTime(d = new Date()){
+    return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())} ` +
+          `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+  }
+  function formatDuration(ms){
+    if (ms == null || ms < 0) return '—';
+    const s = ms / 1000;
+    if (s < 60) return s.toFixed(2) + ' s';
+    const m = Math.floor(s/60);
+    const rs = (s - m*60).toFixed(1);
+    return `${m}m ${rs}s`;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /*  NAVIGATION                                                         */
+  /* ------------------------------------------------------------------ */
+  window.showPage = (id) => {
+    document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.sidebar-btn, .tab-btn, .mnav-btn').forEach(el => el.classList.remove('active'));
+    const page = $('page-' + id);
+    if (page) { void page.offsetWidth; page.classList.add('active'); }
+    ['nav-' + id, 'bnav-' + id, 'mnav-' + id].forEach(x => { const el = $(x); if (el) el.classList.add('active'); });
+    const sc = document.querySelector('.scroll-area');
+    if (sc) sc.scrollTo({ top: 0, behavior: 'smooth' });
+    window.toggleDrawer(false);
+    if (id === 'dash') {
+      requestAnimationFrame(() => setTimeout(() => { try { refreshChartSize(); } catch (e) {} }, 80));
+    }
+  };
+
+  window.toggleDrawer = (open) => {
+    const drawer = $('mobile-drawer');
+    const backdrop = $('drawer-backdrop');
+    const btn = $('btn-menu');
+    if (!drawer || !backdrop) return;
+    const willOpen = typeof open === 'boolean' ? open : !drawer.classList.contains('open');
+    drawer.classList.toggle('open', willOpen);
+    backdrop.classList.toggle('show', willOpen);
+    drawer.setAttribute('aria-hidden', willOpen ? 'false' : 'true');
+    if (btn) btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    document.body.style.overflow = '';
+  };
+
+  /* ------------------------------------------------------------------ */
+  /*  TOAST + LOG                                                        */
+  /* ------------------------------------------------------------------ */
+  function showToast(msg) {
+    const el = $('toast');
+    $('toast-msg').innerText = msg;
+    el.classList.add('show');
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove('show'), 3200);
+  }
+  window.showToast = showToast;
+
+  /* Riwayat full samakan guest: 1 feed, newest-first, maks 18 tampil */
+  const FEED_MAX = 18;
+  function renderFeed() {
+    const panel = $('log-panel');
+    if (!panel) return;
+    if (!state.feed.length) {
+      panel.innerHTML = `<p class="text-[11px] t-muted italic" data-i18n="log.empty">${t('log.empty')}</p>`;
+      return;
+    }
+    panel.innerHTML = state.feed.slice(0, FEED_MAX).map(ev => `
+      <div class="log-item">
+        <div class="log-ico" style="${ev.style}"><i class="${ev.icon}"></i></div>
+        <div class="overflow-hidden">
+          <p class="text-[10px] font-bold t-main truncate">${ev.title}</p>
+          <p class="text-[9px] t-muted truncate">${ev.desc}</p>
+        </div>
+      </div>`).join('');
+  }
+  function pushFeed(ev) {
+    ev.key = ev.key || ('sys|' + Date.now() + '|' + Math.random().toString(36).slice(2));
+    if (state.feed.some(x => x.key === ev.key)) return;
+    state.feed.unshift(ev);
+    if (state.feed.length > 60) state.feed.length = 60;
+    renderFeed();
+  }
+  function logActivity(icon, colorStyle, title, desc) {
+    pushFeed({ icon, style: colorStyle, title, desc, ts: Date.now(), kind: 'sys' });
+  }
+  function feedStyleFor(color) {
+    return color === 'kuning' ? 'background:rgba(234,179,8,.18);color:#ca8a04'
+      : (color === 'biru' ? 'background:rgba(59,130,246,.18);color:#3b82f6'
+        : (color === 'merah' ? 'background:rgba(239,68,68,.18);color:#ef4444'
+          : 'background:rgba(239,68,68,.15);color:#ef4444'));
+  }
+
+  /* ------------------------------------------------------------------ */
+  /*  CLOCK                                                              */
+  /* ------------------------------------------------------------------ */
+  setInterval(() => {
+    const time = new Date().toLocaleTimeString('id-ID');
+    const a = $('live-clock'); if (a) a.innerText = time;
+    const b = $('live-clock-m'); if (b) b.innerText = time;
+    const c = $('live-clock-drawer'); if (c) c.innerText = time;
+  }, 1000);
+
+  /* ------------------------------------------------------------------ */
+  /*  PILL HELPER                                                        */
+  /* ------------------------------------------------------------------ */
+  function setPill(el, variant, text) {
+    el.className = 'pill' + (variant === 'on' ? ' on' : variant === 'blue' ? ' blue' : variant === 'warn' ? ' warn' : '');
+    el.innerText = text;
+  }
+
+  /* ================================================================== */
+  /*  BLUETOOTH — MICRO:BIT                                              */
+  /* ================================================================== */
+  $('btn-conn-bt').onclick = async () => {
+    try {
+      if (!navigator.bluetooth) throw new Error("Bluetooth tidak didukung browser ini.");
+      state.device = await navigator.bluetooth.requestDevice({
+        filters: [{ namePrefix: "BBC micro:bit" }],
+        optionalServices: [UART_SERVICE_UUID]
+      });
+
+      state.device.addEventListener("gattserverdisconnected", () => {
+        state.bleConnected = false; updateBLEUI();
+        logActivity("fas fa-xmark", "background:rgba(239,68,68,.15);color:#ef4444", "BT Disconnected", "Micro:bit terputus.");
+      });
+
+      const server = await state.device.gatt.connect();
+      const service = await server.getPrimaryService(UART_SERVICE_UUID);
+
+      state.txChar = await service.getCharacteristic(UART_TX_CHARACTERISTIC_UUID);
+      state.rxChar = await service.getCharacteristic(UART_RX_CHARACTERISTIC_UUID);
+
+      await state.txChar.startNotifications();
+      state.txChar.addEventListener("characteristicvaluechanged", handleBTEReceive);
+
+      state.bleConnected = true; updateBLEUI();
+      showToast("Micro:bit Connected!");
+      logActivity("fab fa-bluetooth-b", "background:rgba(59,130,246,.15);color:#3b82f6", "Bluetooth Active", "Terhubung ke Micro:bit");
+    } catch (e) { showToast("Gagal konek: " + e.message); }
+  };
+
+  $('btn-dis-bt').onclick = () => { if (state.device) state.device.gatt.disconnect(); };
+
+  function updateBLEUI() {
+    $('btn-conn-bt').disabled = state.bleConnected;
+    $('btn-dis-bt').disabled = !state.bleConnected;
+    setPill($('status-bt'), state.bleConnected ? 'blue' : 'off', state.bleConnected ? "BT: ONLINE" : "BT: OFFLINE");
+  }
+
+  async function sendToMicrobit(payloadStr) {
+    if (!state.rxChar) return;
+    try {
+      await state.rxChar.writeValue(new TextEncoder().encode(payloadStr + "\n"));
+      logActivity("fas fa-paper-plane", "background:rgba(148,163,184,.18);color:var(--muted)", "Kirim ke Micro:bit", `Data: ${payloadStr}`);
+    } catch (e) { console.error(e); }
+  }
+
+  window.changeSortingMode = (newMode) => {
+    const modeCmd = newMode.toLowerCase();
+    sendToMicrobit(modeCmd);
+    showToast(`Mode diubah ke: ${newMode}`);
+    logActivity("fas fa-right-left", "background:rgba(168,85,247,.15);color:#a855f7", "Mode Change Sent", `Mode: ${newMode}`);
+  };
+
+  function handleBTEReceive(event) {
+    let arr = [];
+    for (let i = 0; i < event.target.value.byteLength; i++) arr.push(event.target.value.getUint8(i));
+    state.bleBuffer += String.fromCharCode.apply(null, arr);
+
+    if (state.bleBuffer.includes('\n')) {
+      let msgs = state.bleBuffer.split('\n');
+      state.bleBuffer = msgs.pop();
+      msgs.forEach(msg => {
+        let cleanMsg = msg.trim().toLowerCase();
+        if (cleanMsg && state.pendingDetection && cleanMsg === state.pendingDetection) {
+          triggerSortAction(state.pendingDetection);
+        }
+      });
+    }
+  }
+
+  /* ================================================================== */
+  /*  TEACHABLE MACHINE AI                                               */
+  /* ================================================================== */
+  let model, webcam, labelContainer, maxPredictions;
+
+  /* Normalisasi URL TM: terima link share apa pun, ambil ID modelnya */
+  function normalizeTmUrl(raw) {
+    const s = String(raw || '').trim();
+    if (!s) return '';
+    const m = s.match(/\/models\/([A-Za-z0-9_-]+)/);
+    if (m) return `https://teachablemachine.withgoogle.com/models/${m[1]}/`;
+    let url = s;
+    if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+    if (!url.endsWith('/')) url += '/';
+    return url;
+  }
+  function stopOldTM() {
+    state.tmLoopGen = (state.tmLoopGen || 0) + 1; // hentikan loop lama
+    try { if (webcam) webcam.stop(); } catch (e) {}
+    webcam = null;
+  }
+
+  /* CDN cadangan: kalau jsdelivr diblokir, coba unpkg / versi pin */
+  const TM_LIB_URLS = {
+    tf: [
+      'https://unpkg.com/@tensorflow/tfjs@latest/dist/tf.min.js',
+      'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4/dist/tf.min.js'
+    ],
+    tmImage: [
+      'https://unpkg.com/@teachablemachine/image@latest/dist/teachablemachine-image.min.js',
+      'https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js'
+    ]
+  };
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error('CDN gagal: ' + src));
+      document.head.appendChild(s);
+    });
+  }
+  async function ensureTMLibs() {
+    if (typeof tf === 'undefined') {
+      for (const u of TM_LIB_URLS.tf) {
+        try { await loadScript(u); } catch (e) { console.warn(e); }
+        if (typeof tf !== 'undefined') break;
+      }
+    }
+    if (typeof tmImage === 'undefined') {
+      for (const u of TM_LIB_URLS.tmImage) {
+        try { await loadScript(u); } catch (e) { console.warn(e); }
+        if (typeof tmImage !== 'undefined') break;
+      }
+    }
+    return (typeof tmImage !== 'undefined');
+  }
+
+  window.initTM = async () => {
+    const rawUrl = $('tm-url-input').value.trim();
+    if (!rawUrl) return showToast("Masukkan URL Model TM!");
+    const tmInputUrl = normalizeTmUrl(rawUrl);
+    $('tm-url-input').value = tmInputUrl;
+    const btn = $('btn-start-tm'); btn.disabled = true; btn.innerText = t('vision.loading');
+    setPill($('status-tm'), 'warn', "AI: LOADING");
+
+    try {
+      if (typeof tmImage === 'undefined') {
+        showToast("Mencoba CDN cadangan...");
+        await ensureTMLibs();
+      }
+      if (typeof tmImage === 'undefined') throw new Error("Library TM gagal dimuat (jsdelivr & unpkg dua-duanya gagal). Cek internet / hotspot HP, matikan VPN/adblock, lalu muat ulang halaman.");
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("Kamera diblokir browser. Buka via HTTPS atau localhost, lalu izinkan kamera.");
+      }
+
+      stopOldTM();
+      state._frameCount = 0;
+      state._fpsTimer = performance.now();
+      model = await tmImage.load(tmInputUrl + "model.json", tmInputUrl + "metadata.json");
+      maxPredictions = model.getTotalClasses();
+      if (!maxPredictions) throw new Error("Model termuat tapi tidak ada kelas. Latih dulu modelnya di Teachable Machine.");
+      webcam = new tmImage.Webcam(220, 220, true);
+      try {
+        await webcam.setup();
+      } catch (e) {
+        throw new Error("Kamera tidak bisa dibuka (izin ditolak / dipakai aplikasi lain). Izinkan akses kamera lalu coba lagi.");
+      }
+      await webcam.play();
+      const myGen = state.tmLoopGen || 0;
+      window.requestAnimationFrame(() => tmLoop(myGen));
+
+      const web = $('webcam-container');
+      web.innerHTML = '';
+      web.appendChild(webcam.canvas);
+      const overlay = document.createElement('div');
+      overlay.id = 'pause-overlay';
+      overlay.innerHTML = `<i class="fas fa-pause-circle text-white text-3xl"></i>
+                          <span class="text-white font-bold text-[11px]">${t('vision.pausedOverlay')}</span>`;
+      web.appendChild(overlay);
+
+      labelContainer = $('label-container'); labelContainer.innerHTML = '';
+      for (let i = 0; i < maxPredictions; i++) {
+        const div = document.createElement("div");
+        div.className = "flex justify-between text-[11px] px-3 py-2 rounded-xl font-bold t-main border";
+        div.style.background = 'var(--surface-soft)';
+        div.style.borderColor = 'var(--border)';
+        labelContainer.appendChild(div);
+      }
+
+      state.aiReady = true;
+      state.isPaused = false;
+      btn.disabled = false;
+      btn.innerText = t('vision.online');
+      btn.style.background = '#16a34a';
+      setPill($('status-tm'), 'on', "AI: ONLINE");
+      setPill($('status-cam'), 'on', "CAM: ONLINE");
+      setPill($('status-fps'), '', "FPS: —");
+
+      const btnPause = $('btn-pause-ai');
+      btnPause.disabled = false;
+      btnPause.classList.remove('hidden');
+      btnPause.classList.remove('is-resume');
+      btnPause.innerHTML = '<i class="fas fa-pause"></i> ' + t('vision.pause');
+      logActivity("fas fa-robot", "background:rgba(34,197,94,.15);color:#16a34a", "AI Vision Aktif", maxPredictions + " kelas dimuat");
+      showToast("AI Ready!");
+    } catch (e) {
+      console.error(e);
+      stopOldTM();
+      state.aiReady = false;
+      btn.disabled = false; btn.innerText = t('vision.start');
+      btn.style.background = '';
+      setPill($('status-tm'), '', "AI: ERROR");
+      setPill($('status-cam'), '', "CAM: ERROR");
+      const msg = (e && e.message) ? e.message : String(e);
+      logActivity("fas fa-triangle-exclamation", "background:rgba(239,68,68,.15);color:#ef4444", "AI Gagal Dimuat", msg);
+      showToast(msg.length > 90 ? msg.slice(0, 90) + "…" : msg);
+    }
+  };
+
+  window.stopCamera = () => {
+    stopOldTM();
+    state.aiReady = false;
+    state.isPaused = false;
+    state.fps = 0;
+
+    const web = $('webcam-container');
+    web.innerHTML = `
+      <div class="text-center px-4 py-8">
+        <i class="fas fa-video text-2xl mb-2 t-muted opacity-50"></i>
+        <p class="text-[11px] t-muted font-semibold">Kamera Dimatikan</p>
+      </div>
+      <div id="pause-overlay">
+        <i class="fas fa-pause-circle text-white text-3xl"></i>
+        <span class="text-white font-bold text-[11px]">${t('vision.pausedOverlay')}</span>
+      </div>`;
+
+    const lc = $('label-container'); if (lc) lc.innerHTML = '';
+    const ld = $('last-detect');
+    if (ld) ld.innerHTML = '<span class="t-muted italic" style="font-weight:500">Belum ada</span>';
+
+    const btn = $('btn-start-tm');
+    btn.disabled = false;
+    btn.innerText = t('vision.start');
+    btn.style.background = '';
+
+    const btnPause = $('btn-pause-ai');
+    btnPause.disabled = true;
+    btnPause.classList.add('hidden');
+
+    setPill($('status-tm'), '', "AI: STANDBY");
+    setPill($('status-cam'), '', "CAM: OFFLINE");
+    setPill($('status-fps'), '', "FPS: —");
+
+    showToast("Kamera dimatikan");
+  };
+
+  window.logDetection = async () => {
+    if (!state.aiReady || !model || !webcam) {
+      return showToast("AI belum aktif!");
+    }
+    try {
+      const pred = await model.predict(webcam.canvas);
+      let best = pred[0];
+      for (const p of pred) if (p.probability > best.probability) best = p;
+
+      const pct = (best.probability * 100).toFixed(1);
+      const time = new Date().toLocaleTimeString('id-ID');
+      state.lastDetection = { name: best.className, prob: best.probability, time };
+
+      const ld = $('last-detect');
+      if (ld) ld.innerHTML =
+        `<span style="color:var(--brand)">${best.className}</span>` +
+        `<span class="t-muted"> · ${pct}% · ${time}</span>`;
+
+      showToast(`Detected: ${best.className} (${pct}%)`);
+    } catch (e) {
+      showToast("Gagal log: " + e.message);
+    }
+  };
+
+  window.togglePause = () => {
+    if (!state.aiReady) return;
+    state.isPaused = !state.isPaused;
+    const btnPause = $('btn-pause-ai');
+    const overlay = $('pause-overlay');
+
+    if (state.isPaused) {
+      btnPause.innerHTML = '<i class="fas fa-play"></i> ' + t('vision.resume');
+      btnPause.classList.add('is-resume');
+      if (overlay) overlay.classList.add('show');
+      setPill($('status-tm'), 'warn', "AI: PAUSED");
+      logActivity("fas fa-pause", "background:rgba(234,179,8,.18);color:#ca8a04", "AI Paused", "Deteksi AI dihentikan sementara");
+    } else {
+      btnPause.innerHTML = '<i class="fas fa-pause"></i> ' + t('vision.pause');
+      btnPause.classList.remove('is-resume');
+      if (overlay) overlay.classList.remove('show');
+      setPill($('status-tm'), 'on', "AI: ONLINE");
+      logActivity("fas fa-play", "background:rgba(34,197,94,.18);color:#16a34a", "AI Resumed", "Deteksi AI dilanjutkan");
+    }
+  };
+
+  async function tmLoop(gen) {
+    if ((state.tmLoopGen || 0) !== (gen || 0)) return; // loop lama, berhenti
+    if (!webcam) return;
+    try {
+      webcam.update();
+
+      // FPS counter
+      state._frameCount++;
+      const now = performance.now();
+      if (now - state._fpsTimer >= 1000) {
+        state.fps = state._frameCount;
+        state._frameCount = 0;
+        state._fpsTimer = now;
+        const fp = $('status-fps');
+        if (fp) setPill(fp, 'on', `FPS: ${state.fps}`);
+      }
+
+      if (!state.isPaused && model) { await tmPredict(); }
+    } catch (e) { console.warn('tmLoop:', e); }
+    window.requestAnimationFrame(() => tmLoop(gen));
+  }
+
+  async function tmPredict() {
+    if (!model || !webcam) return;
+    let pred;
+    try {
+      pred = await model.predict(webcam.canvas);
+    } catch (e) { console.warn('tmPredict:', e); return; }
+
+    let bestName = '', bestProb = 0;
+
+    for (let i = 0; i < maxPredictions; i++) {
+      const name = pred[i].className;
+      const probNum = Number(pred[i].probability) || 0;
+      if (probNum > bestProb) { bestProb = probNum; bestName = name; }
+
+      if (labelContainer && labelContainer.childNodes[i]) {
+        labelContainer.childNodes[i].innerHTML =
+          `<span>${name}</span><span style="color:var(--brand)">${Math.round(probNum * 100)}%</span>`;
+      }
+    }
+
+    // Tampilkan best detection live
+    if (bestProb > 0.3) {
+      const time = new Date().toLocaleTimeString('id-ID');
+      state.lastDetection = { name: bestName, prob: bestProb, time };
+      const ld = $('last-detect');
+      if (ld) ld.innerHTML =
+        `<span style="color:var(--brand)">${bestName}</span>` +
+        `<span class="t-muted"> · ${(bestProb * 100).toFixed(1)}% · ${time}</span>`;
+    }
+
+    if (bestProb > 0.85 && !state.isCoolingDown && !state.pendingDetection) {
+      const cLower = bestName.toLowerCase();
+      let colorCode = null;
+
+      if (cLower.includes('kuning') || cLower.includes('yellow')) colorCode = 'kuning';
+      else if (cLower.includes('biru') || cLower.includes('blue')) colorCode = 'biru';
+      else if (cLower.includes('merah') || cLower.includes('red')) colorCode = 'merah';
+
+      if (colorCode) {
+        // Tanpa micro:bit = mode mandiri: langsung catat, tanpa tunggu handshake
+        if (!state.rxChar) {
+          standaloneSortAction(colorCode);
+        } else {
+          state.isCoolingDown = true;
+          state.pendingDetection = colorCode;
+          state.pendingStartTime = Date.now();
+          state.pendingMode = $('mode-selector').value;
+          sendToMicrobit(colorCode);
+          state.timeoutTimer = setTimeout(() => { executeTimeout(colorCode); }, 12000);
+        }
+      }
+    }
+  }
+
+  /* ================================================================== */
+  /*  SORTING LOGIC + TIMEOUT                                            */
+  /* ================================================================== */
+  window.executeTimeout = (expectedColor) => {
+    if (state.pendingDetection === expectedColor || expectedColor === 'force') {
+      const failedColor = state.pendingDetection || 'Unknown';
+      const durationMs = state.pendingStartTime ? (Date.now() - state.pendingStartTime) : null;
+      const startedMode = state.pendingMode;
+
+      state.pendingDetection = null;
+      state.pendingStartTime = null;
+      state.pendingMode = null;
+      state.isCoolingDown = false;
+      if (state.timeoutTimer) clearTimeout(state.timeoutTimer);
+
+      state.sortingData.gagal++;
+      updateUIStats(); updateChart();
+
+      const nowMs = Date.now();
+      const now = new Date(nowMs);
+      const timeStr = now.toLocaleTimeString('id-ID');
+      const dateTimeStr = formatDateTime(now);
+      const errMode = startedMode || $('mode-selector').value;
+
+      pushFeed({ icon: 'fas fa-clock', style: 'background:rgba(239,68,68,.15);color:#ef4444',
+        title: 'Error', desc: `${dateTimeStr} · ${errMode}`,
+        ts: nowMs, kind: 'data', key: 'err|' + nowMs });
+
+      if (state.db) {
+        update(ref(state.db, `${state.currentPath}/gagal`), {
+          [state.sortingData.gagal - 1]: { timestamp: nowMs, value: 1 }
+        }).catch(e => console.error("Firebase Error:", e));
+      }
+
+      const properColorName = failedColor.charAt(0).toUpperCase() + failedColor.slice(1);
+
+      state.excelLogs.push({
+        datetime: dateTimeStr,
+        timestamp: timeStr,
+        warna: properColorName,
+        mode: startedMode || $('mode-selector').value,
+        status: expectedColor === 'force' ? "Force Timeout" : "Timeout/Error",
+        duration: formatDuration(durationMs),
+        durationMs: durationMs || 0,
+        nilai: 0
+      });
+    }
+  };
+
+  window.forceTimeout = () => {
+    if (!state.pendingDetection) return showToast("Tidak ada objek yang sedang dalam proses sortasi.");
+    executeTimeout('force');
+    showToast("Sukses: Force Timeout Dieksekusi!");
+  };
+
+  async function triggerSortAction(category) {
+    if (state.timeoutTimer) clearTimeout(state.timeoutTimer);
+    const durationMs = state.pendingStartTime ? (Date.now() - state.pendingStartTime) : null;
+    const startedMode = state.pendingMode;
+
+    state.pendingDetection = null;
+    state.pendingStartTime = null;
+    state.pendingMode = null;
+    setTimeout(() => { state.isCoolingDown = false; }, 1000);
+
+    state.sortingData[category]++;
+    state.sortingData.total++;
+
+    const currentMode = startedMode || $('mode-selector').value;
+    const nowMs = Date.now();
+    const now = new Date(nowMs);
+    const timeStr = now.toLocaleTimeString('id-ID');
+    const dateTimeStr = formatDateTime(now);
+    const properColorName = category.charAt(0).toUpperCase() + category.slice(1);
+
+    state.excelLogs.push({
+      datetime: dateTimeStr,
+      timestamp: timeStr,
+      warna: properColorName,
+      mode: currentMode,
+      status: "Berhasil",
+      duration: formatDuration(durationMs),
+      durationMs: durationMs || 0,
+      nilai: 1
+    });
+
+    updateUIStats(); updateChart();
+
+    pushFeed({ icon: 'fas fa-check', style: feedStyleFor(category),
+      title: `${properColorName} Tersortir`,
+      desc: `${dateTimeStr} · ${currentMode}`,
+      ts: nowMs, kind: 'data', key: `ok|${category}|${nowMs}|${currentMode}` });
+
+    if (state.db) {
+      try {
+        await update(ref(state.db, `${state.currentPath}/${category}`), {
+          [state.sortingData[category] - 1]: { timestamp: nowMs, mode: currentMode, duration: durationMs || 0, value: 1 }
+        });
+      } catch (e) {}
+    }
+  }
+
+  /* Deteksi AI mandiri (tanpa micro:bit / tanpa database): langsung catat */
+  async function standaloneSortAction(category) {
+    state.isCoolingDown = true;
+    setTimeout(() => { state.isCoolingDown = false; }, 2500);
+
+    state.sortingData[category]++;
+    state.sortingData.total++;
+
+    const currentMode = $('mode-selector').value;
+    const nowMs = Date.now();
+    const now = new Date(nowMs);
+    const timeStr = now.toLocaleTimeString('id-ID');
+    const dateTimeStr = formatDateTime(now);
+    const properColorName = category.charAt(0).toUpperCase() + category.slice(1);
+
+    state.excelLogs.push({
+      datetime: dateTimeStr,
+      timestamp: timeStr,
+      warna: properColorName,
+      mode: currentMode,
+      status: "Berhasil",
+      duration: '—',
+      durationMs: 0,
+      nilai: 1
+    });
+
+    updateUIStats(); updateChart();
+
+    pushFeed({ icon: 'fas fa-check', style: feedStyleFor(category),
+      title: `${properColorName} Tersortir`,
+      desc: `${dateTimeStr} · ${currentMode} · Langsung (tanpa BT)`,
+      ts: nowMs, kind: 'data', key: `ok|${category}|${nowMs}|${currentMode}` });
+
+    if (state.db) {
+      try {
+        await update(ref(state.db, `${state.currentPath}/${category}`), {
+          [state.sortingData[category] - 1]: { timestamp: nowMs, mode: currentMode, value: 1 }
+        });
+      } catch (e) {}
+    }
+  }
+
+  window.logMissort = async () => {
+    state.sortingData.gagal++; updateUIStats(); updateChart();
+    const nowMs = Date.now();
+    const now = new Date(nowMs);
+    const timeStr = now.toLocaleTimeString('id-ID');
+    const dateTimeStr = formatDateTime(now);
+    const qcMode = $('mode-selector').value;
+
+    state.excelLogs.push({
+      datetime: dateTimeStr,
+      timestamp: timeStr,
+      warna: 'Unknown',
+      mode: qcMode,
+      status: 'Manual QC',
+      duration: '—',
+      durationMs: 0,
+      nilai: 0
+    });
+
+    pushFeed({ icon: 'fas fa-triangle-exclamation', style: 'background:rgba(249,115,22,.18);color:#f97316',
+      title: 'Error', desc: `${dateTimeStr} · ${qcMode}`,
+      ts: nowMs, kind: 'data', key: 'err|' + nowMs });
+
+    if (state.db) {
+      await update(ref(state.db, `${state.currentPath}/gagal`), {
+        [state.sortingData.gagal - 1]: { timestamp: nowMs, value: 1 }
+      });
+    }
+  };
+
+  /* Input manual K / B / M — kalau sensor belum detect, langsung nambah */
+  window.manualAdd = async (color) => {
+    const c = String(color || '').toLowerCase();
+    if (!['kuning', 'biru', 'merah'].includes(c)) return;
+    if (state.timeoutTimer) clearTimeout(state.timeoutTimer);
+    state.pendingDetection = null;
+    state.pendingStartTime = null;
+    state.pendingMode = null;
+    state.isCoolingDown = false;
+
+    sendToMicrobit(c);
+
+    state.sortingData[c]++;
+    state.sortingData.total++;
+
+    const currentMode = $('mode-selector').value;
+    const nowMs = Date.now();
+    const now = new Date(nowMs);
+    const timeStr = now.toLocaleTimeString('id-ID');
+    const dateTimeStr = formatDateTime(now);
+    const properColorName = c.charAt(0).toUpperCase() + c.slice(1);
+
+    state.excelLogs.push({
+      datetime: dateTimeStr,
+      timestamp: timeStr,
+      warna: properColorName,
+      mode: currentMode,
+      status: 'Manual',
+      duration: '—',
+      durationMs: 0,
+      nilai: 1
+    });
+
+    updateUIStats(); updateChart();
+
+    pushFeed({ icon: 'fas fa-hand-pointer', style: feedStyleFor(c),
+      title: `${properColorName} Manual`,
+      desc: `${dateTimeStr} · ${currentMode}`,
+      ts: nowMs, kind: 'data', key: `ok|${c}|${nowMs}|${currentMode}` });
+
+    if (state.db) {
+      try {
+        await update(ref(state.db, `${state.currentPath}/${c}`), {
+          [state.sortingData[c] - 1]: { timestamp: nowMs, mode: currentMode, value: 1 }
+        });
+      } catch (e) {}
+    }
+  };
+
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+    const k = String(e.key || '').toLowerCase();
+    if (k !== 'k' && k !== 'b' && k !== 'm') return;
+    const ae = document.activeElement;
+    if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT' || ae.isContentEditable)) return;
+    if (document.querySelector('.modal.open')) return;
+    if (k === 'k') window.manualAdd('kuning');
+    else if (k === 'b') window.manualAdd('biru');
+    else if (k === 'm') window.manualAdd('merah');
+  });
+
+  window.resetData = async () => {
+    if (confirm("Reset seluruh data visual, memori history, dan cloud?")) {
+      state.sortingData = { kuning: 0, biru: 0, merah: 0, gagal: 0, total: 0 };
+      state.excelLogs = [];
+      state.feed = [];
+      state.pendingDetection = null;
+      state.pendingStartTime = null;
+      state.pendingMode = null;
+      state.chartYMax = 5;
+      if (state.chart) state.chart.options.scales.y.max = 5;
+      updateUIStats(); updateChart(); renderFeed();
+      if (state.db) await set(ref(state.db, state.currentPath), { kuning: null, biru: null, merah: null, gagal: null });
+      showToast("Sistem direset!");
+    }
+  };
+
+  /* ================================================================== */
+  /*  UI STATS + CHART                                                   */
+  /* ================================================================== */
+  function popMetric(id) {
+    const el = $(id);
+    if (!el) return;
+    el.classList.remove('pop');
+    void el.offsetWidth;
+    el.classList.add('pop');
+  }
+  function updateUIStats() {
+    $('stat-total').innerText = state.sortingData.total;
+    $('stat-kuning').innerText = state.sortingData.kuning;
+    $('stat-biru').innerText = state.sortingData.biru;
+    $('stat-merah').innerText = state.sortingData.merah;
+    $('stat-gagal').innerText = state.sortingData.gagal;
+    const se = $('stat-error'); if (se) se.innerText = state.sortingData.gagal;
+    ['stat-total', 'stat-kuning', 'stat-biru', 'stat-merah', 'stat-error'].forEach(popMetric);
+    try { checkRules(); } catch (e) {}
+  }
+
+  function chartLabels() {
+    return state.lang === 'id' ? ['Kuning', 'Biru', 'Merah', 'Error'] : ['Yellow', 'Blue', 'Red', 'Error'];
+  }
+
+  function computeYMax(values) {
+    const m = Math.max(...values, 1);
+    if (m <= 5) return 5;
+    if (m <= 10) return 10;
+    if (m <= 20) return 20;
+    if (m <= 50) return 50;
+    if (m <= 100) return 100;
+    if (m <= 200) return 200;
+    if (m <= 500) return 500;
+    return Math.ceil(m / 500) * 500;
+  }
+
+  let _chartRetry = 0;
+  function initChart() {
+    try {
+      if (typeof Chart === 'undefined') throw new Error('Chart.js belum termuat');
+      const cv = $('sortingChart');
+      if (!cv) return;
+      const ctx = cv.getContext('2d');
+      if (state.chart) { try { state.chart.destroy(); } catch (e) {} state.chart = null; }
+      state.chartYMax = 5;
+      state.chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: chartLabels(),
+          datasets: [{
+            data: [0, 0, 0, 0],
+            backgroundColor: ['#c69a45', '#2b4b9b', '#b91c1c', '#94a3b8'],
+            hoverBackgroundColor: ['#97742a', '#1a2456', '#991b1b', '#64748b'],
+            borderRadius: 10, borderSkipped: false,
+            maxBarThickness: 64, minBarLength: 2
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          animation: { duration: 600, easing: 'easeOutQuart' },
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { weight: '700', size: 11 } } },
+            y: { beginAtZero: true, max: state.chartYMax,
+              grid: { color: 'rgba(148,163,184,.16)' },
+              ticks: { color: '#94a3b8', precision: 0, font: { size: 11 },
+                callback: (v) => Number.isInteger(v) ? v : null } }
+          }
+        }
+      });
+    } catch (err) {
+      console.warn('initChart gagal:', err);
+      if (_chartRetry < 5) { _chartRetry++; setTimeout(initChart, 1500); }
+      else {
+        const cv = $('sortingChart');
+        if (cv && cv.parentElement && !cv.parentElement.querySelector('.chart-fallback')) {
+          const p = document.createElement('p');
+          p.className = 'chart-fallback text-[11px] t-muted text-center py-6';
+          p.innerText = state.lang === 'id' ? 'Diagram gagal dimuat. Periksa koneksi lalu muat ulang.' : 'Chart failed to load. Check connection and reload.';
+          cv.parentElement.appendChild(p);
+        }
+      }
+    }
+  }
+
+  function updateChart() {
+    if (!state.chart) { try { initChart(); } catch (e) {} return; }
+    const newData = [
+      state.sortingData.kuning,
+      state.sortingData.biru,
+      state.sortingData.merah,
+      state.sortingData.gagal
+    ];
+    try {
+      const needed = computeYMax(newData);
+      if (needed > state.chartYMax) {
+        state.chartYMax = needed;
+        state.chart.options.scales.y.max = needed;
+      }
+      const ds = state.chart.data.datasets[0].data;
+      ds[0] = newData[0]; ds[1] = newData[1]; ds[2] = newData[2]; ds[3] = newData[3];
+      state.chart.data.labels = chartLabels();
+      state.chart.update();
+    } catch (err) { console.warn('updateChart gagal:', err); }
+  }
+
+  function refreshChartSize() {
+    if (!state.chart) return;
+    try { state.chart.resize(); state.chart.update('none'); } catch (e) {}
+  }
+
+  /* ================================================================== */
+  /*  FIREBASE                                                           */
+  /* ================================================================== */
+  $('btn-open-fb').onclick = () => window.openModal('fb-modal');
+
+  function setConnBtn(connected) {
+    const b = $('btn-conn-fb');
+    if (!b) return;
+    const label = b.querySelector('span');
+    if (connected) {
+      b.style.background = '#16a34a';
+      if (label) label.innerText = t('fb.connected');
+    } else {
+      b.style.background = '';
+      if (label) label.innerText = t('fb.connect');
+    }
+  }
+
+  /* Satu klik connect ke database bawaan — samakan guest */
+  window.connectDB = async () => {
+    setPill($('status-fb'), '', state.lang === 'id' ? 'FB: MENGHUBUNGKAN...' : 'FB: CONNECTING...');
+    try {
+      const apps = getApps(); if (apps.length > 0) await deleteApp(apps[0]);
+      if (state.unsubscribe) state.unsubscribe();
+
+      state.db = getDatabase(initializeApp(FB_CONFIG));
+      state.currentPath = FB_PATH;
+
+      state.unsubscribe = onValue(ref(state.db, FB_PATH), (snap) => {
+        const data = snap.val() || {};
+        state.dbData = data;
+        const collectCloud = (obj) => {
+          if (!obj) return [];
+          const arr = Array.isArray(obj) ? obj : Object.values(obj);
+          return arr.filter(x => x !== null && typeof x === 'object');
+        };
+        const count = (obj) => collectCloud(obj).length;
+        state.sortingData = {
+          kuning: count(data.kuning), biru: count(data.biru), merah: count(data.merah),
+          gagal: count(data.gagal),
+          total: count(data.kuning) + count(data.biru) + count(data.merah)
+        };
+        updateUIStats(); updateChart();
+        /* Gabung riwayat cloud yg belum ada di feed (samakan guest) */
+        try {
+          const seen = new Set(state.feed.map(x => x.key));
+          const proper = { kuning: 'Kuning', biru: 'Biru', merah: 'Merah' };
+          const add = [];
+          ['kuning', 'biru', 'merah'].forEach(k => {
+            collectCloud(data[k]).forEach(e => {
+              const ts = Number(e.timestamp) || 0;
+              const mode = e.mode || '-';
+              const key = `ok|${k}|${ts}|${mode}`;
+              if (!seen.has(key)) {
+                seen.add(key);
+                add.push({ key, icon: 'fas fa-check', style: feedStyleFor(k),
+                  title: `${proper[k]} Tersortir`,
+                  desc: `${ts ? formatDateTime(new Date(ts)) : '-'} · ${mode}`,
+                  ts, kind: 'data' });
+              }
+            });
+          });
+          collectCloud(data.gagal).forEach(e => {
+            const ts = Number(e.timestamp) || 0;
+            const key = 'err|' + ts;
+            if (!seen.has(key)) {
+              seen.add(key);
+              add.push({ key, icon: 'fas fa-triangle-exclamation', style: feedStyleFor('gagal'),
+                title: 'Error',
+                desc: `${ts ? formatDateTime(new Date(ts)) : '-'}`,
+                ts, kind: 'data' });
+            }
+          });
+          if (add.length) {
+            state.feed = state.feed.concat(add).sort((a, b) => b.ts - a.ts).slice(0, 60);
+            renderFeed();
+          }
+        } catch (e) { console.warn('merge cloud feed gagal:', e); }
+        setPill($('status-fb'), 'on', "FB: SYNCED");
+        setConnBtn(true);
+      }, (err) => {
+        console.error(err);
+        setPill($('status-fb'), 'warn', "FB: ERROR");
+        setConnBtn(false);
+        showToast("FB Error: " + (err && err.message ? err.message : err));
+      });
+      showToast(state.lang === 'id' ? 'Menghubungkan database...' : 'Connecting database...');
+      window.closeModal('fb-modal');
+    } catch (e) { setConnBtn(false); showToast("FB Error: " + e.message); }
+  };
+  $('btn-conn-fb').onclick = () => window.connectDB();
+
+  /* ================================================================== */
+  /*  MODAL SYSTEM                                                       */
+  /* ================================================================== */
+  /* Gerbang login: guest tanpa password, admin pakai password */
+  function hideGate() {
+    const g = $('login-gate');
+    if (g) g.classList.add('hide');
+  }
+  window.loginGuest = () => { window.location.href = 'guest.html'; };
+  window.logoutAdmin = () => {
+    try { sessionStorage.removeItem('rlab_admin_auth'); } catch (e) {}
+    const pw = $('admin-pass'); if (pw) pw.value = '';
+    const err = $('login-err'); if (err) err.classList.remove('show');
+    const g = $('login-gate');
+    if (g) g.classList.remove('hide');
+  };
+  window.loginAdmin = () => {
+    const v = ($('admin-pass') ? $('admin-pass').value : '');
+    if (v === ADMIN_PASS) {
+      try { sessionStorage.setItem('rlab_admin_auth', '1'); } catch (e) {}
+      const err = $('login-err'); if (err) err.classList.remove('show');
+      hideGate();
+      showToast(state.lang === 'id' ? 'Selamat datang, Admin!' : 'Welcome, Admin!');
+    } else {
+      const err = $('login-err'); if (err) err.classList.add('show');
+      const card = $('login-card');
+      if (card) { card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake'); }
+    }
+  };
+  window.openModal = (id) => {
+    const m = $(id); if (!m) return;
+    if (id === 'export-modal') refreshExportSummary();
+    m.classList.add('open');
+  };
+  window.closeModal = (id) => { const m = $(id); if (m) m.classList.remove('open'); };
+
+  document.querySelectorAll('.modal').forEach(m => {
+    m.addEventListener('click', (e) => {
+      if (e.target.classList.contains('modal') || e.target.classList.contains('modal-backdrop')) {
+        m.classList.remove('open');
+      }
+    });
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open'));
+      window.toggleDrawer(false);
+    }
+  });
+
+  /* ================================================================== */
+  /*  SETTINGS — LANGUAGE / THEME / BAR POSITION                         */
+  /* ================================================================== */
+  window.setLanguage = (lang) => {
+    state.lang = lang;
+    try { localStorage.setItem('rlab_lang', lang); } catch (e) {}
+    applyLanguage(); syncSettingsUI();
+    showToast(lang === 'id' ? 'Bahasa: Indonesia' : 'Language: English');
+  };
+
+  function applyLanguage() {
+    document.documentElement.lang = state.lang;
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.dataset.i18n;
+      const val = I18N[state.lang][key];
+      if (val !== undefined) el.innerHTML = val;
+    });
+    document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+      const key = el.dataset.i18nPh;
+      const val = I18N[state.lang][key];
+      if (val !== undefined) el.placeholder = val;
+    });
+    const startBtn = $('btn-start-tm');
+    if (startBtn && !state.aiReady) startBtn.innerText = t('vision.start');
+    else if (startBtn && state.aiReady) startBtn.innerText = t('vision.online');
+
+    const pauseBtn = $('btn-pause-ai');
+    if (pauseBtn && !pauseBtn.classList.contains('hidden')) {
+      pauseBtn.innerHTML = (state.isPaused ? '<i class="fas fa-play"></i> ' + t('vision.resume')
+        : '<i class="fas fa-pause"></i> ' + t('vision.pause'));
+    }
+    const ov = $('pause-overlay');
+    if (ov) { const span = ov.querySelector('span'); if (span) span.innerText = t('vision.pausedOverlay'); }
+
+    if (state.chart) { state.chart.data.labels = chartLabels(); state.chart.update(); }
+  }
+
+  window.toggleTheme = () => {
+    state.theme = state.theme === 'dark' ? 'light' : 'dark';
+    applyTheme(); syncSettingsUI();
+  };
+
+  function applyTheme() {
+    document.documentElement.classList.toggle('dark', state.theme === 'dark');
+    try { localStorage.setItem('rlab_theme', state.theme); } catch (e) {}
+  }
+
+  window.setBarPosition = (pos) => {
+    if (pos === 'bottom') pos = 'top';
+    if (!['left', 'right', 'top'].includes(pos)) return;
+    state.barPos = pos;
+    applyBarPosition(); syncSettingsUI();
+    try { localStorage.setItem('rlab_bar', pos); } catch (e) {}
+    const label = pos === 'left' ? (state.lang === 'id' ? 'Kiri' : 'Left') : pos === 'right' ? (state.lang === 'id' ? 'Kanan' : 'Right') : (state.lang === 'id' ? 'Atas' : 'Top');
+    showToast(state.lang === 'id' ? `Navigasi: ${label}` : `Navigation: ${label}`);
+  };
+
+  function applyBarPosition() {
+    const shell = $('app-shell');
+    if (!shell) return;
+    if (state.barPos === 'bottom') state.barPos = 'top';
+    const firstRun = !shell.classList.contains('pos-left') && !shell.classList.contains('pos-right') && !shell.classList.contains('pos-top');
+    shell.classList.remove('pos-left', 'pos-right', 'pos-top');
+    void shell.offsetWidth;
+    shell.classList.add('pos-' + state.barPos);
+    if (!firstRun) {
+      shell.classList.remove('is-switching');
+      void shell.offsetWidth;
+      shell.classList.add('is-switching');
+      clearTimeout(shell._swT);
+      shell._swT = setTimeout(() => shell.classList.remove('is-switching'), 380);
+    }
+  }
+
+  function syncSettingsUI() {
+    document.querySelectorAll('#lang-seg button').forEach(b => b.classList.toggle('active', b.dataset.lang === state.lang));
+    document.querySelectorAll('#bar-seg button').forEach(b => b.classList.toggle('active', b.dataset.pos === state.barPos));
+    const sw = $('theme-switch');
+    if (sw) sw.classList.toggle('on', state.theme === 'dark');
+  }
+
+  /* ================================================================== */
+  /*  EXPORT ENGINE — ringkasan full + error selalu (samakan guest)     */
+  /* ================================================================== */
+  const COLOR_MAP = {
+    'Kuning': { fill: 'FEF3C7', text: '92400E', rgb: [254, 243, 199], hex: 'D97706' },
+    'Biru':   { fill: 'DBEAFE', text: '1E40AF', rgb: [219, 234, 254], hex: '1A2456' },
+    'Merah':  { fill: 'FEE2E2', text: '991B1B', rgb: [254, 226, 226], hex: 'B91C1C' },
+    'Unknown':{ fill: 'F1F5F9', text: '475569', rgb: [241, 245, 249], hex: '64748B' }
+  };
+  const colorMeta = (name) => COLOR_MAP[name] || COLOR_MAP['Unknown'];
+
+  function localColor(name) {
+    if (state.lang === 'en') {
+      return name === 'Kuning' ? 'Yellow' : name === 'Biru' ? 'Blue' : name === 'Merah' ? 'Red' : name;
+    }
+    return name;
+  }
+  function localStatus(st) {
+    if (st === 'Manual') return 'Manual';
+    if (state.lang === 'en') {
+      if (st === 'Berhasil') return 'Success';
+      if (st === 'Manual QC') return 'Manual QC';
+      if (st === 'Timeout/Error') return 'Timeout/Error';
+      if (st === 'Force Timeout') return 'Force Timeout';
+    } else {
+      if (st === 'Berhasil') return 'Berhasil';
+      if (st === 'Manual QC') return 'QC Manual';
+      if (st === 'Timeout/Error') return 'Timeout/Error';
+      if (st === 'Force Timeout') return 'Force Timeout';
+    }
+    return st;
+  }
+
+  function getSummary() {
+    const d = state.sortingData;
+    const attempts = d.total + d.gagal;
+    const rate = attempts > 0 ? ((d.total / attempts) * 100).toFixed(1) : '0.0';
+    return { total: d.total, kuning: d.kuning, biru: d.biru, merah: d.merah, gagal: d.gagal, rate, attempts };
+  }
+
+  /* Render ringkasan di modal export — selalu full (samakan guest) */
+  function refreshExportSummary() {
+    const s = getSummary();
+    const set = (id, v) => { const el = $(id); if (el) el.innerText = v; };
+    set('exp-total', s.total);
+    set('exp-kuning', s.kuning);
+    set('exp-biru', s.biru);
+    set('exp-merah', s.merah);
+    set('exp-gagal', s.gagal);
+  }
+
+  window.openExportModal = () => { refreshExportSummary(); window.openModal('export-modal'); };
+
+  function timestampTag() {
+    const d = new Date();
+    const p = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  function hasAnyData() {
+    return (state.sortingData.total + state.sortingData.gagal) > 0
+      || buildCloudLogs().length > 0 || state.excelLogs.length > 0;
+  }
+
+  /* Export diambil sepenuhnya dari database — samakan guest */
+  function collectEntries(obj) {
+    if (!obj) return [];
+    const arr = Array.isArray(obj) ? obj : Object.values(obj);
+    return arr.filter(x => x !== null && typeof x === 'object');
+  }
+  function buildCloudLogs() {
+    const data = state.dbData || {};
+    const proper = { kuning: 'Kuning', biru: 'Biru', merah: 'Merah' };
+    const out = [];
+    ['kuning', 'biru', 'merah'].forEach(k => {
+      collectEntries(data[k]).forEach(e => {
+        const ts = Number(e.timestamp) || 0;
+        const dur = Number(e.duration) || 0;
+        out.push({
+          datetime: ts ? formatDateTime(new Date(ts)) : '-',
+          timestamp: ts ? new Date(ts).toLocaleTimeString('id-ID') : '-',
+          warna: proper[k],
+          mode: e.mode || '-',
+          status: 'Berhasil',
+          duration: dur ? formatDuration(dur) : '—',
+          durationMs: dur,
+          nilai: 1,
+          _ts: ts
+        });
+      });
+    });
+    collectEntries(data.gagal).forEach(e => {
+      const ts = Number(e.timestamp) || 0;
+      out.push({
+        datetime: ts ? formatDateTime(new Date(ts)) : '-',
+        timestamp: ts ? new Date(ts).toLocaleTimeString('id-ID') : '-',
+        warna: 'Unknown',
+        mode: '-',
+        status: 'Timeout/Error',
+        duration: '—',
+        durationMs: 0,
+        nilai: 0,
+        _ts: ts
+      });
+    });
+    out.sort((a, b) => a._ts - b._ts);
+    return out;
+  }
+  /* Sumber export otomatis: database kalau connect, lokal kalau tidak */
+  function getExportRows() {
+    if (state.db && state.dbData) return buildCloudLogs();
+    return state.excelLogs;
+  }
+  function exportSourceTag() {
+    return (state.db && state.dbData)
+      ? (state.lang === 'id' ? 'Sumber: Database' : 'Source: Database')
+      : (state.lang === 'id' ? 'Sumber: Lokal (offline)' : 'Source: Local (offline)');
+  }
+
+  /* ---------- CSV ---------- */
+  function csvEscape(v) {
+    const s = String(v ?? '');
+    return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  }
+  /* Cegah formula injection (= + - @) di Excel/CSV — samakan guest */
+  function safeCell(v) {
+    const s = String(v ?? '');
+    return /^[=+\-@]/.test(s) ? `'${s}` : s;
+  }
+  function exportCSV() {
+    if (!hasAnyData()) {
+      return showToast(state.lang === 'id' ? "Belum ada data untuk diexport!" : "No data to export yet!");
+    }
+    const rows = getExportRows();
+    const sep = ',';
+    const s = getSummary();
+    const errRate = s.attempts > 0 ? ((s.gagal / s.attempts) * 100).toFixed(1) + '%' : '0.0%';
+    const L = (id, en) => state.lang === 'en' ? en : id;
+    let csv = '';
+    csv += 'R-LAB — SMART SORTING FACTORY REPORT\r\n';
+    csv += `Generated${sep}${csvEscape(formatDateTime(new Date()))}\r\n`;
+    csv += `${csvEscape(exportSourceTag())}\r\n`;
+    csv += '\r\n';
+
+    // ---- Ringkasan full + error selalu (samakan guest) ----
+    csv += [L('Total Diproses','Total Processed'), L('Kuning','Yellow'), L('Biru','Blue'), L('Merah','Red')].map(csvEscape).join(sep) + '\r\n';
+    csv += [s.total, s.kuning, s.biru, s.merah].map(csvEscape).join(sep) + '\r\n';
+    csv += '\r\n';
+    csv += ['Error Count', 'Error Rate', 'Total Attempts'].map(csvEscape).join(sep) + '\r\n';
+    csv += [s.gagal, errRate, s.attempts].map(csvEscape).join(sep) + '\r\n';
+    csv += '\r\n';
+
+    // ---- Detail log dari database (samakan guest) ----
+    csv += ['No','Datetime','Time','Color','Mode','Status','Duration','Value'].map(csvEscape).join(sep) + '\r\n';
+    rows.forEach((row, i) => {
+      csv += [
+        i + 1,
+        csvEscape(safeCell(row.datetime || row.timestamp)),
+        csvEscape(safeCell(row.timestamp)),
+        csvEscape(safeCell(localColor(row.warna))),
+        csvEscape(safeCell(row.mode)),
+        csvEscape(safeCell(localStatus(row.status))),
+        csvEscape(safeCell(row.duration || '—')),
+        row.nilai
+      ].join(sep) + '\r\n';
+    });
+    downloadBlob(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' }), `R-LAB_Report_${timestampTag()}.csv`);
+    showToast("CSV berhasil diunduh!");
+  }
+  window.exportExcel = () => exportCSV();
+
+  /* ---------- XLSX ---------- */
+  function exportXLSX() {
+    if (typeof XLSX === 'undefined') return showToast("Library Excel belum termuat.");
+    if (!hasAnyData()) return showToast(state.lang === 'id' ? "Belum ada data untuk diexport!" : "No data to export yet!");
+    const s = getSummary();
+    const rows = getExportRows();
+    const wb = XLSX.utils.book_new();
+    const aoa = [];
+
+    aoa.push(['R-LAB — SMART SORTING FACTORY REPORT']);
+    aoa.push(['Generated', formatDateTime(new Date()), '', exportSourceTag()]);
+    aoa.push([]);
+    aoa.push(['SORTING SUMMARY']);
+
+    // Ringkasan full + error selalu (samakan guest)
+    const L = (id, en) => state.lang === 'en' ? en : id;
+    const errRate = s.attempts > 0 ? ((s.gagal / s.attempts) * 100).toFixed(1) + '%' : '0.0%';
+    const summaryHeader = [L('Total Diproses','Total Processed'), L('Kuning','Yellow'), L('Biru','Blue'), L('Merah','Red')];
+    const summaryValues = [s.total, s.kuning, s.biru, s.merah];
+
+    const SUMMARY_HEADER_ROW = aoa.length;
+    aoa.push(summaryHeader);
+    const SUMMARY_VALUE_ROW = aoa.length;
+    aoa.push(summaryValues);
+    aoa.push([]);
+    aoa.push(['Error Count', 'Error Rate', 'Total Attempts']);
+    const ERROR_HEADER_ROW = aoa.length - 1;
+    aoa.push([s.gagal, errRate, s.attempts]);
+    const ERROR_VALUE_ROW = aoa.length - 1;
+
+    aoa.push([]);
+    aoa.push(['No', 'Datetime', 'Color', 'Mode', 'Status', 'Duration', 'Value']);
+    const HEADER_ROW = aoa.length - 1;
+    rows.forEach((r, i) => aoa.push([
+      i + 1,
+      safeCell(r.datetime || r.timestamp),
+      safeCell(localColor(r.warna)),
+      safeCell(r.mode),
+      safeCell(localStatus(r.status)),
+      safeCell(r.duration || '—'),
+      r.nilai
+    ]));
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    const maxCols = 7;
+    ws['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: maxCols - 1 } },
+      { s: { r: 3, c: 0 }, e: { r: 3, c: maxCols - 1 } }
+    ];
+    ws['!cols'] = [
+      { wch: 8 }, { wch: 22 }, { wch: 12 }, { wch: 12 },
+      { wch: 18 }, { wch: 12 }, { wch: 8 }
+    ];
+    ws['!rows'] = [{ hpt: 30 }, {}, {}, { hpt: 20 }];
+    ws['!freeze'] = { xSplit: 0, ySplit: HEADER_ROW + 1 };
+    try {
+      ws['!autofilter'] = { ref: `A${HEADER_ROW + 1}:G${HEADER_ROW + 1}` };
+    } catch (e) {}
+
+    const thin = { style: 'thin', color: { rgb: 'CBD5E1' } };
+    const border = { top: thin, bottom: thin, left: thin, right: thin };
+
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const addr = XLSX.utils.encode_cell({ r: R, c: C });
+        const cell = ws[addr];
+        if (!cell) continue;
+        let style = { font: { sz: 11, color: { rgb: '1E293B' } }, alignment: { vertical: 'center' } };
+
+        if (R === 0) {
+          style = { font: { sz: 16, bold: true, color: { rgb: 'FFFFFF' } },
+            fill: { fgColor: { rgb: '1A2456' } },
+            alignment: { horizontal: 'center', vertical: 'center' } };
+        } else if (R === 3) {
+          style = { font: { sz: 12, bold: true, color: { rgb: '1A2456' } },
+            fill: { fgColor: { rgb: 'E0E7FF' } },
+            alignment: { horizontal: 'left', vertical: 'center' } };
+        } else if (R === SUMMARY_HEADER_ROW) {
+          // Header full: Total biru + tiap warna pakai warna kategorinya (samakan guest)
+          const headFills = ['1A2456', 'D97706', '1A2456', 'B91C1C'];
+          style = { font: { sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+            fill: { fgColor: { rgb: headFills[C] || '0F172A' } },
+            alignment: { horizontal: 'center', vertical: 'center' }, border };
+        } else if (R === SUMMARY_VALUE_ROW) {
+          const fills = ['E0E7FF', 'FEF3C7', 'DBEAFE', 'FEE2E2'];
+          const texts = ['1A2456', '92400E', '1E40AF', '991B1B'];
+          style = { font: { sz: 13, bold: true, color: { rgb: texts[C] || '0F172A' } },
+            fill: { fgColor: { rgb: fills[C] || 'F1F5F9' } },
+            alignment: { horizontal: 'center' }, border };
+        } else if (R === ERROR_HEADER_ROW) {
+          style = { font: { sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+            fill: { fgColor: { rgb: '991B1B' } },
+            alignment: { horizontal: 'center', vertical: 'center' }, border };
+        } else if (R === ERROR_VALUE_ROW) {
+          style = { font: { sz: 12, bold: true, color: { rgb: C === 2 ? '475569' : '991B1B' } },
+            fill: { fgColor: { rgb: C === 2 ? 'F1F5F9' : 'FEE2E2' } },
+            alignment: { horizontal: 'center' }, border };
+        } else if (R === HEADER_ROW) {
+          style = { font: { sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+            fill: { fgColor: { rgb: '0F172A' } },
+            alignment: { horizontal: 'center', vertical: 'center' }, border };
+        } else if (R > HEADER_ROW) {
+          const rowData = rows[R - HEADER_ROW - 1];
+          const meta = colorMeta(rowData ? rowData.warna : 'Unknown');
+          style = { font: { sz: 11, color: { rgb: meta.text } },
+            fill: { fgColor: { rgb: meta.fill } },
+            alignment: { horizontal: (C === 0 || C === 6) ? 'center' : 'left', vertical: 'center', wrapText: C === 1 },
+            border };
+        }
+        cell.s = style;
+        if (R > HEADER_ROW && C === 1) { try { cell.z = '@'; cell.t = 's'; } catch (e) {}}
+      }
+    }
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Sorting Report');
+    XLSX.writeFile(wb, `R-LAB_Report_${timestampTag()}.xlsx`);
+    showToast("Excel (.xlsx) berhasil diunduh!");
+  }
+
+  /* ---------- PDF ---------- */
+  function hexToRgb(hex) {
+    const n = parseInt(hex, 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  function exportPDF() {
+    if (!window.jspdf) return showToast("Library PDF belum termuat.");
+    if (!hasAnyData()) return showToast(state.lang === 'id' ? "Belum ada data untuk diexport!" : "No data to export yet!");
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+    const W = doc.internal.pageSize.getWidth();
+    const s = getSummary();
+
+    doc.setFillColor(26, 36, 86);
+    doc.rect(0, 0, W, 92, 'F');
+  doc.setFillColor(198, 154, 69);
+  doc.rect(0, 88, W, 4, 'F');
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(24);
+    doc.text('R-LAB', 40, 42);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
+    doc.text('Smart Sorting Factory — Production Report', 40, 62);
+    doc.setFontSize(9);
+    doc.text('Generated: ' + formatDateTime(new Date()) + '  ·  ' + exportSourceTag(), 40, 78);
+
+    // ---- Summary full + error selalu (samakan guest) ----
+    const L = (id, en) => state.lang === 'en' ? en : id;
+    const errRateAll = s.attempts > 0 ? ((s.gagal / s.attempts) * 100).toFixed(1) + '%' : '0.0%';
+    const sectionTitle = (txt, y) => {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(26, 36, 86);
+      doc.text(txt, 40, y);
+    };
+    sectionTitle('1. SORTING SUMMARY', 110);
+    doc.autoTable({
+      startY: 116,
+      head: [[L('Total Diproses','Total Processed'), L('Kuning','Yellow'), L('Biru','Blue'), L('Merah','Red')]],
+      body: [[s.total, s.kuning, s.biru, s.merah]],
+      theme: 'grid',
+      headStyles: { fillColor: [15, 23, 42], textColor: 255, fontSize: 9, halign: 'center', fontStyle: 'bold' },
+      bodyStyles: { fontSize: 12, halign: 'center', fontStyle: 'bold', textColor: [30, 41, 59] },
+      margin: { left: 40, right: 40 }
+    });
+
+    sectionTitle('2. ERROR SUMMARY', (doc.lastAutoTable ? doc.lastAutoTable.finalY : 160) + 24);
+    doc.autoTable({
+      startY: (doc.lastAutoTable ? doc.lastAutoTable.finalY : 160) + 30,
+      head: [['Error', 'Error Rate', 'Total Attempts']],
+      body: [[s.gagal + 'x error', errRateAll, s.attempts]],
+      theme: 'grid',
+      headStyles: { fillColor: [153, 27, 27], textColor: 255, fontSize: 9, halign: 'center', fontStyle: 'bold' },
+      bodyStyles: { fontSize: 11, halign: 'center', fontStyle: 'bold', textColor: [153, 27, 27], fillColor: [254, 226, 226] },
+      margin: { left: 40, right: 40 }
+    });
+
+    // Detail log (database kalau connect, lokal kalau tidak) — samakan guest
+    const body = getExportRows().map((r, i) => {
+      const meta = colorMeta(r.warna);
+      const tc = hexToRgb(meta.text);
+      return [
+        { content: i + 1, styles: { fillColor: meta.rgb, textColor: tc } },
+        { content: safeCell(r.datetime || r.timestamp), styles: { fillColor: meta.rgb, textColor: tc } },
+        { content: safeCell(localColor(r.warna)), styles: { fillColor: meta.rgb, textColor: tc } },
+        { content: safeCell(r.mode), styles: { fillColor: meta.rgb, textColor: tc } },
+        { content: safeCell(localStatus(r.status)), styles: { fillColor: meta.rgb, textColor: tc } },
+        { content: safeCell(r.duration || '—'), styles: { fillColor: meta.rgb, textColor: tc } },
+        { content: r.nilai, styles: { fillColor: meta.rgb, textColor: tc } }
+      ];
+    });
+
+    sectionTitle('3. DETAILED SORTING LOG', (doc.lastAutoTable ? doc.lastAutoTable.finalY : 160) + 24);
+    doc.autoTable({
+      startY: (doc.lastAutoTable ? doc.lastAutoTable.finalY : 160) + 30,
+      head: [['No', 'Datetime (YYYY-MM-DD HH:MM:SS)', 'Color', 'Mode', 'Status', 'Duration', 'Value']],
+      body: body.length ? body : [[{ content: 'No data recorded', colSpan: 7, styles: { halign: 'center', textColor: [120, 130, 150] } }]],
+      theme: 'grid',
+      headStyles: { fillColor: [30, 58, 138], textColor: 255, fontSize: 8, halign: 'center' },
+      bodyStyles: { fontSize: 8, halign: 'center', textColor: [30, 41, 59] },
+      columnStyles: {
+        0: { cellWidth: 26 },
+        1: { cellWidth: 108 },
+        2: { cellWidth: 56 },
+        3: { cellWidth: 52 },
+        4: { cellWidth: 100 },
+        5: { cellWidth: 60 },
+        6: { cellWidth: 42 }
+      },
+      margin: { left: 30, right: 30 },
+      didDrawPage: () => {
+        const H = doc.internal.pageSize.getHeight();
+        doc.setFontSize(8); doc.setTextColor(150);
+        doc.text('R-LAB — Smart Sorting System', 30, H - 20);
+        doc.text('Page ' + doc.internal.getNumberOfPages(), W - 70, H - 20);
+      }
+    });
+
+    doc.save(`R-LAB_Report_${timestampTag()}.pdf`);
+    showToast("PDF berhasil diunduh!");
+  }
+
+  /* ---------- DOCX ---------- */
+  async function exportDOCX() {
+    const D = window.docx;
+    if (!D) return showToast("Library DOCX belum termuat.");
+    if (!hasAnyData()) return showToast(state.lang === 'id' ? "Belum ada data untuk diexport!" : "No data to export yet!");
+    const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+            WidthType, AlignmentType, ShadingType, BorderStyle, VerticalAlign } = D;
+
+    const s = getSummary();
+    const rows = getExportRows();
+
+    const DETAIL_W = [620, 2200, 1180, 1060, 1820, 1280, 800]; // total 8960
+
+    const thinBorder = { style: BorderStyle.SINGLE, size: 4, color: 'CBD5E1' };
+    const cellBorders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
+
+    function mkCell(text, opts = {}) {
+      const { width, fill, color = '1E293B', bold = false,
+              align = AlignmentType.CENTER, size = 18, colSpan } = opts;
+      return new TableCell({
+        ...(width ? { width: { size: width, type: WidthType.DXA } } : {}),
+        ...(colSpan ? { columnSpan: colSpan } : {}),
+        shading: fill ? { type: ShadingType.CLEAR, color: 'auto', fill } : undefined,
+        margins: { top: 60, bottom: 60, left: 90, right: 90 },
+        borders: cellBorders,
+        verticalAlign: VerticalAlign.CENTER,
+        children: [new Paragraph({
+          alignment: align,
+          children: [new TextRun({ text: String(text), size, bold, color })]
+        })]
+      });
+    }
+
+    // ---- Summary table full + error selalu (samakan guest) ----
+    const L = (id, en) => state.lang === 'en' ? en : id;
+    const errRate = s.attempts > 0 ? ((s.gagal / s.attempts) * 100).toFixed(1) + '%' : '0.0%';
+    const summaryCols = 4;
+    const totalW = 8960;
+    const colW = Math.floor(totalW / summaryCols);
+    const sumHeads = [
+      [L('Total Diproses','Total Processed'), '1E3A8A', s.total, 'E0E7FF', '1A2456'],
+      [L('Kuning','Yellow'), 'D97706', s.kuning, 'FEF3C7', '92400E'],
+      [L('Biru','Blue'), '1A2456', s.biru, 'DBEAFE', '1E40AF'],
+      [L('Merah','Red'), 'B91C1C', s.merah, 'FEE2E2', '991B1B']
+    ];
+
+    const summaryChildren = [];
+    summaryChildren.push(new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      columnWidths: Array(summaryCols).fill(colW),
+      rows: [
+        new TableRow({ tableHeader: true, children: sumHeads.map(h => mkCell(h[0], { width: colW, fill: h[1], color: 'FFFFFF', bold: true, size: 16 })) }),
+        new TableRow({ children: sumHeads.map(h => mkCell(h[2], { width: colW, fill: h[3], color: h[4], bold: true, size: 24 })) })
+      ]
+    }));
+
+    // ---- Error table selalu ----
+    const W = [2986, 2987, 2987];
+    const errorTable = new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      columnWidths: W,
+      rows: [
+        new TableRow({
+          tableHeader: true,
+          children: [
+            mkCell('Error Count',    { width: W[0], fill: '991B1B', color: 'FFFFFF', bold: true }),
+            mkCell('Error Rate',     { width: W[1], fill: '991B1B', color: 'FFFFFF', bold: true }),
+            mkCell('Total Attempts', { width: W[2], fill: '991B1B', color: 'FFFFFF', bold: true })
+          ]
+        }),
+        new TableRow({
+          children: [
+            mkCell(s.gagal + 'x', { width: W[0], fill: 'FEE2E2', color: '991B1B', bold: true, size: 22 }),
+            mkCell(errRate,       { width: W[1], fill: 'FEE2E2', color: '991B1B', bold: true, size: 22 }),
+            mkCell(s.attempts,    { width: W[2], fill: 'F1F5F9', color: '475569', bold: true, size: 22 })
+          ]
+        })
+      ]
+    });
+
+    // ---- Detail table (timestamp ikut berwarna, samakan guest) ----
+    const detailRows = [
+      new TableRow({
+        tableHeader: true,
+        children: ['No','Datetime (YYYY-MM-DD HH:MM:SS)','Color','Mode','Status','Duration','Value'].map((h, i) =>
+          mkCell(h, { width: DETAIL_W[i], fill: '0F172A', color: 'FFFFFF', bold: true, size: 16 })
+        )
+      })
+    ];
+
+    if (rows.length === 0) {
+      detailRows.push(new TableRow({
+        children: [mkCell('No data recorded',
+          { colSpan: 7, width: DETAIL_W.reduce((a,b)=>a+b,0), fill: 'F8FAFC', color: '94A3B8', size: 16 })]
+      }));
+    } else {
+      rows.forEach((r, i) => {
+        const meta = colorMeta(r.warna);
+        const cells = [
+          i + 1,
+          safeCell(r.datetime || r.timestamp),
+          safeCell(localColor(r.warna)),
+          safeCell(r.mode),
+          safeCell(localStatus(r.status)),
+          safeCell(r.duration || '—'),
+          r.nilai
+        ];
+        detailRows.push(new TableRow({
+          children: cells.map((v, ci) =>
+            mkCell(v, { width: DETAIL_W[ci], fill: meta.fill, color: meta.text, size: 16,
+              align: (ci === 1 || ci === 4) ? AlignmentType.LEFT : AlignmentType.CENTER })
+          )
+        }));
+      });
+    }
+
+    const detailTable = new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      columnWidths: DETAIL_W,
+      rows: detailRows
+    });
+
+    // ---- Susun children dokumen (samakan guest: 1 ringkasan, 2 error, 3 detail) ----
+    const docChildren = [
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 40 },
+        children: [new TextRun({ text: 'R-LAB', bold: true, size: 56, color: '1A2456', font: 'Arial' })]
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 40 },
+        children: [new TextRun({ text: 'SMART SORTING FACTORY — PRODUCTION REPORT',
+          bold: true, size: 18, color: '0F172A', font: 'Arial' })]
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 240 },
+          border: { bottom: { style: BorderStyle.SINGLE, size: 12, color: 'C69A45', space: 6 } },
+        children: [new TextRun({
+          text: 'Generated: ' + formatDateTime(new Date()) + '  ·  ' + exportSourceTag(),
+          size: 16, color: '64748B', font: 'Arial'
+        })]
+      })
+    ];
+
+    docChildren.push(new Paragraph({
+      spacing: { before: 60, after: 120 },
+      children: [new TextRun({ text: '1. SORTING SUMMARY', bold: true, size: 22, color: '1A2456', font: 'Arial' })]
+    }));
+    summaryChildren.forEach(c => docChildren.push(c));
+
+    docChildren.push(new Paragraph({
+      spacing: { before: 260, after: 120 },
+      children: [new TextRun({ text: '2. ERROR SUMMARY', bold: true, size: 22, color: '991B1B', font: 'Arial' })]
+    }));
+    docChildren.push(errorTable);
+
+    docChildren.push(new Paragraph({
+      spacing: { before: 260, after: 120 },
+      children: [new TextRun({ text: '3. DETAILED SORTING LOG', bold: true, size: 22, color: '1A2456', font: 'Arial' })]
+    }));
+    docChildren.push(detailTable);
+
+    docChildren.push(new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 400, after: 60 },
+      border: { top: { style: BorderStyle.SINGLE, size: 6, color: 'CBD5E1', space: 8 } },
+      children: [new TextRun({
+        text: 'R-LAB — Hamzah Aufa Ibrahim · Muhammad Alif Al Hafidz · Ahmad Bilal Alfatih',
+        size: 14, color: '94A3B8', font: 'Arial'
+      })]
+    }));
+
+    const doc = new Document({
+      creator: 'R-LAB',
+      title: 'R-LAB Smart Sorting Report',
+      description: 'Production report generated by R-LAB dashboard',
+      sections: [{
+        properties: {
+          page: {
+            size: { orientation: 'portrait' },
+            margin: { top: 720, bottom: 720, left: 720, right: 720 }
+          }
+        },
+        children: docChildren
+      }]
+    });
+
+    try {
+      const blob = await Packer.toBlob(doc);
+      downloadBlob(blob, `R-LAB_Report_${timestampTag()}.docx`);
+      showToast("Word (.docx) berhasil diunduh!");
+    } catch (e) {
+      console.error(e);
+      showToast("Gagal membuat DOCX.");
+    }
+  }
+
+  /* ---------- EXPORT ROUTER (database kalau connect, lokal kalau tidak) ---------- */
+  window.doExport = async (type) => {
+    if (!hasAnyData()) {
+      showToast(state.lang === 'id' ? "Belum ada data untuk diexport!" : "No data to export yet!");
+      return;
+    }
+    window.closeModal('export-modal');
+    await new Promise(r => setTimeout(r, 180));
+    try {
+      if (type === 'xlsx') exportXLSX();
+      else if (type === 'pdf') exportPDF();
+      else exportCSV();
+    } catch (e) { console.error(e); showToast("Export error: " + e.message); }
+  };
+
+  /* ================================================================== */
+  /*  JARVIS — asisten AI R-LAB (perintah lokal + suara + aturan)        */
+  /* ================================================================== */
+  /* ============================================================
+     R-AI — backend aman, TIDADA API key di file ini.
+     Semua panggilan lewat server lokal /api/*.
+     Kunci API hanya ada di _secrets\keys.json (di luar folder web).
+     Kalau server tidak jalan -> otomatis mode cadangan.
+     ============================================================ */
+  const RAI_URL = '/api/chat';
+  const RAI_TIMEOUT = 20000;
+  let raiBackendOK = true;
+  async function raiFetch(q) {
+    const ctrl = new AbortController();
+    const to = setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, RAI_TIMEOUT);
+    try {
+      const r = await fetch(RAI_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: q, context: raiContext() }),
+        signal: ctrl.signal
+      });
+      if (!r.ok) throw new Error('R-AI HTTP ' + r.status);
+      const j = await r.json();
+      if (!j || !j.reply) throw new Error('R-AI kosong');
+      raiBackendOK = true;
+      return String(j.reply);
+    } catch (err) {
+      if (raiBackendOK) {
+        raiBackendOK = false;
+        try {
+          showToast('Server R-AI belum jalan - jalankan server.ps1 (mode cadangan)');
+        } catch (e) {}
+      }
+      throw err;
+    } finally { clearTimeout(to); }
+  }
+  let jarvisOpened = false, jarvisVoice = true, jarvisPending = null;
+
+  const JL = (id, en) => state.lang === 'en' ? en : id;
+  const escJ = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  function jarvisAddMsg(text, who, src) {
+    const box = $('jarvis-msgs');
+    if (!box) return null;
+    const d = document.createElement('div');
+    d.className = 'jarvis-msg ' + who;
+    d.innerHTML = escJ(text).replace(/\n/g, '<br>');
+    if (who === 'bot' && src) {
+      const cap = document.createElement('span');
+      cap.className = 'jarvis-src';
+      cap.textContent = src;
+      d.appendChild(cap);
+    }
+    box.appendChild(d);
+    box.scrollTop = box.scrollHeight;
+    while (box.children.length > 60) box.firstChild.remove();
+    return d;
+  }
+  /* Pilih voice browser terbaik (hanya dipakai sebagai cadangan terakhir) */
+  let raiVoicePick = null;
+  function pickRaiVoice() {
+    try {
+      if (!('speechSynthesis' in window)) return;
+      const vs = speechSynthesis.getVoices() || [];
+      if (!vs.length) return;
+      const tag = state.lang === 'en' ? 'en' : 'id';
+      const pool = vs.filter(v => v.lang && v.lang.toLowerCase().indexOf(tag) === 0);
+      const src = pool.length ? pool : vs;
+      const score = (v) => {
+        const n = ((v.name || '') + ' ' + (v.voiceURI || '')).toLowerCase();
+        let s = 0;
+        if (/natural|neural|premium|siri/.test(n)) s += 5;
+        if (/google/.test(n)) s += 3;
+        if (/online|cloud/.test(n)) s += 2;
+        if (v.localService === false) s += 2;
+        if (/female|woman|aurora|kejora|samantha|karen|moira|tessa|zira/.test(n)) s += 1;
+        if (/espeak|robot|pocomp|compact/.test(n)) s -= 6;
+        return s;
+      };
+      src.sort((a, b) => score(b) - score(a));
+      raiVoicePick = src[0] || null;
+    } catch (e) { raiVoicePick = null; }
+  }
+  /* Rapikan teks supaya tidak dibaca robot/mentok-markdown */
+  function humanizeSpeak(t) {
+    return String(t || '')
+      .replace(/\[[A-Z_]+:[^\]]*\]/g, ' ')
+      .replace(/[*_#`>|~]/g, ' ')
+      .replace(/https?:\S+/g, ' ')
+      .replace(/\((?:https?|www)[^)]*\)/g, ' ')
+      .replace(/\s*[-\u2013\u2014]\s*/g, ', ')
+      .replace(/(\d)\s*%/g, '$1 persen')
+      .replace(/\s{2,}/g, ' ')
+      .trim().slice(0, 300);
+  }
+
+/* ============================================================
+     TTS — suara neural dari server (bukan suara robot browser)
+     Urutan: 1) /api/tts-neural (paling natural)
+             2) /api/tts         (cepat, ~0.3 detik)
+             3) speechSynthesis  (cadangan terakhir, hanya bila server mati)
+     ============================================================ */
+  let raiAudio = null, raiAudioURL = '';
+  const RAI_TTS_MODE = 'auto';   // 'auto' | 'neural' | 'fast' | 'off'
+  const RAI_TTS_VOICE = 'Kore';  // suara neural: Kore/Leda/Sulafat = perempuan, Alnilam/Charon = laki-laki
+
+  function ttsStop() {
+    try { if (raiAudio) { raiAudio.pause(); raiAudio.currentTime = 0; } } catch (e) {}
+    try { if ('speechSynthesis' in window) speechSynthesis.cancel(); } catch (e) {}
+  }
+  /* Resolusi: hasil PERTAMA yang tidak-null. Kalau semua gagal -> null (bukan hang). */
+  function ttsRaceFirst(jobs, ms) {
+    return new Promise((resolve) => {
+      if (!jobs.length) return resolve(null);
+      let pending = jobs.length, done = false;
+      const finish = (v) => { if (done) return; done = true; resolve(v); };
+      jobs.forEach(p => Promise.resolve(p).then(
+        v => { if (v) finish(v); else if (--pending === 0) finish(null); },
+        () => { if (--pending === 0) finish(null); }
+      ));
+      setTimeout(() => finish(null), ms);
+    });
+  }
+  async function ttsPlay(url, mime) {
+    ttsStop();
+    if (raiAudioURL) { try { URL.revokeObjectURL(raiAudioURL); } catch (e) {} }
+    raiAudioURL = URL.createObjectURL(new Blob([url], { type: mime }));
+    return await new Promise((res) => {
+      let settled = false;
+      const done = (v) => { if (settled) return; settled = true; res(v); };
+      try {
+        const a = new Audio(raiAudioURL);
+        raiAudio = a;
+        /* Sengaja TIDAK menunggu 'ended': yang dibutuhkan hanya konfirmasi
+           suara mulai. Menunggu ended bisa menggantung 30 detik di perangkat
+           tanpa audio output. Jaring pengaman 8 detik tetap dipasang. */
+        const started = a.play();
+        if (started && started.catch) {
+          started.then(() => done(true)).catch(() => { try { a.onerror = null; } catch (e) {} done(false); });
+        } else { done(true); }
+        setTimeout(() => done(!a.paused), 8000);
+      } catch (e) { done(false); }
+    });
+  }
+  async function jarvisSpeak(txt) {
+    if (!jarvisVoice) return;
+    const clean = humanizeSpeak(txt);
+    if (!clean) return;
+    try { if (raiRec) raiRecStop(false); } catch (e) {}
+    if (RAI_TTS_MODE === 'off') return;
+    const lang = state.lang === 'en' ? 'en' : 'id';
+
+    const grab = async (path, payload, mime) => {
+      try {
+        const r = await fetch(path, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!r.ok) return null;
+        const buf = await r.arrayBuffer();
+        if (!buf.byteLength) return null;
+        return { buf: buf, mime: mime };
+      } catch (e) { return null; }
+    };
+    /* Balapan TTS.
+       PENTING: /api/tts (cepat, ~0,4 detik, tanpa kuota)DIKIRIM LEBIH DAHULU
+       karena server memproses request satu per satu secara berurutan.
+       /api/tts-neural (Gemini, suara paling natural) hanya 10 permintaan/hari
+       gratis, jadi sering 429 - server otomatis melewatinya sementara waktu.
+       Yang pertama berhasil yang diputar. Semua gagal -> null (goto cadangan). */
+    const jobs = [];
+    if (RAI_TTS_MODE === 'auto' || RAI_TTS_MODE === 'fast')   jobs.push(grab('/api/tts', { text: clean, lang: lang }, 'audio/mpeg'));
+    if (RAI_TTS_MODE === 'auto' || RAI_TTS_MODE === 'neural') jobs.push(grab('/api/tts-neural', { text: clean, voice: RAI_TTS_VOICE }, 'audio/wav'));
+
+    const win = await ttsRaceFirst(jobs, 15000);
+    if (win) { if (await ttsPlay(win.buf, win.mime)) return; }
+
+    /* cadangan terakhir: speechSynthesis browser */
+    try {
+      if (!('speechSynthesis' in window)) return;
+      const u = new SpeechSynthesisUtterance(clean);
+      u.lang = lang === 'en' ? 'en-US' : 'id-ID';
+      if (raiVoicePick) u.voice = raiVoicePick;
+      u.rate = 0.97; u.pitch = 1.05; u.volume = 1;
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+  function jarvisMicUI(on) {
+    const fab = $('jarvis-fab'), mic = $('jarvis-mic');
+    if (fab) fab.classList.toggle('listening', on);
+    if (mic) mic.innerHTML = `<i class="fas ${on ? 'fa-stop' : 'fa-microphone'} text-xs"></i>`;
+  }
+  function jarvisSay(txt, speak = true, src = 'Lokal') {
+    jarvisAddMsg(txt, 'bot', src);
+    if (speak) jarvisSpeak(txt);
+  }
+
+  window.jarvisToggle = (open) => {
+    const p = $('jarvis-panel');
+    if (!p) return;
+    const willOpen = typeof open === 'boolean' ? open : !p.classList.contains('open');
+    p.classList.toggle('open', willOpen);
+    if (!willOpen) {
+      try { if (raiRec) raiRecStop(false); } catch (e) {}
+      try { speechSynthesis.cancel(); } catch (e) {}
+    }
+    if (willOpen) {
+      renderJarvisChips();
+      if (!jarvisOpened) {
+        jarvisOpened = true;
+        jarvisSay(JL(
+          'Halo! Saya R-AI, AI dari produsen R-LAB. Tanya status, perintahkan perangkat, atau buat aturan otomatis. Coba: "total berapa?" atau "ubah ke mode arm".',
+          'Hello! I am R-AI, AI from R-LAB. Ask status, command devices, or create automation rules. Try: "how many total?" or "change to arm mode".'
+        ), false);
+      }
+      setTimeout(() => { const i = $('jarvis-text'); if (i) i.focus(); }, 250);
+    }
+  };
+  function renderJarvisChips() {
+    const box = $('jarvis-chips');
+    if (!box) return;
+    const chips = state.lang === 'en'
+      ? ['Status', 'Total?', 'Arm mode', 'Export PDF', 'Make a rule', 'Help']
+      : ['Status', 'Total berapa?', 'Mode arm', 'Export PDF', 'Buat aturan', 'Bantuan'];
+    box.innerHTML = '';
+    chips.forEach(c => {
+      const b = document.createElement('button');
+      b.className = 'jarvis-chip';
+      b.innerText = c;
+      b.onclick = () => { $('jarvis-text').value = c; window.jarvisSend(); };
+      box.appendChild(b);
+    });
+  }
+  window.jarvisSpeakerToggle = () => {
+    jarvisVoice = !jarvisVoice;
+    if (!jarvisVoice) { try { speechSynthesis.cancel(); } catch (e) {} }
+    const b = $('jarvis-voice-btn');
+    if (b) b.innerHTML = `<i class="fas ${jarvisVoice ? 'fa-volume-up' : 'fa-volume-mute'} text-xs"></i>`;
+    showToast(jarvisVoice ? 'Jarvis bersuara' : 'Jarvis bisu');
+  };
+  function getRaiStatus() { return raiBackendOK ? 'online (server lokal)' : 'mode cadangan'; }
+  /* Konteks live agar R-AI bisa mikir pakai data nyata */
+  function raiContext() {
+    const s = getSummary();
+    let mode = '-';
+    try { mode = $('mode-selector').value; } catch (e) {}
+    return 'Konteks live R-LAB: total=' + s.total + ', kuning=' + s.kuning + ', biru=' + s.biru +
+      ', merah=' + s.merah + ', error=' + s.gagal + ', sukses=' + s.rate + '%, mode=' + mode +
+      ', bluetooth=' + (state.bleConnected ? 'online' : 'offline') + ', database=' + (state.db ? 'synced' : 'offline') +
+      ', AIvision=' + (state.aiReady ? (state.isPaused ? 'paused' : 'online') : 'off') +
+      ', aturanAktif=' + loadRules().filter(r => r.enabled).length + '.';
+  }
+const FREE_TIMEOUT = 8000;
+async function askRaiFree(q) {
+  const ctrl = new AbortController();
+  const to = setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, FREE_TIMEOUT);
+  try {
+    const full = 'Kamu R-AI, AI buatan R-LAB untuk pabrik sortir pintar. Jawab singkat. Pertanyaan: ' + q;
+    const r = await fetch('https://text.pollinations.ai/' + encodeURIComponent(full.slice(0, 900)), { signal: ctrl.signal });
+    if (!r.ok) throw new Error('free ' + r.status);
+    let a = (await r.text() || '').trim();
+    a = a.replace(/saya adalah gemini|aku adalah gemini|i am gemini|i'm gemini/gi, 'saya R-AI').replace(/google/gi, 'R-LAB');
+    if (!a) throw new Error('empty');
+    return a;
+  } finally { clearTimeout(to); }
+}
+  async function askRai(q) {
+    let a;
+    try {
+      a = await raiFetch(q);
+    } catch (e) {
+      raiBackendOK = false;
+      try {
+        const free = await askRaiFree(q);
+        if (free) return { text: free, actions: [] };
+      } catch (e2) {}
+      throw e;
+    }
+    a = a.replace(/saya adalah gemini|aku adalah gemini|i am gemini|i'm gemini/gi, 'saya R-AI')
+         .replace(/chatgpt|gpt-oss|openai|langchain/i, 'R-LAB');
+    if (!a) throw new Error('empty');
+    const actions = [];
+    const mMode = a.match(/\[MODE:(Arm|Servo)\]/i);
+    if (mMode) actions.push({ t: 'mode', a: mMode[1].toLowerCase() === 'arm' ? 'Arm' : 'Servo' });
+    if (/\[PAUSE\]/i.test(a)) actions.push({ t: 'pause' });
+    if (/\[RESUME\]/i.test(a)) actions.push({ t: 'resume' });
+    if (/\[TIMEOUT\]/i.test(a)) actions.push({ t: 'timeout' });
+    if (/\[MISSORT\]/i.test(a)) actions.push({ t: 'missort' });
+    const mExp = a.match(/\[EXPORT:(pdf|xlsx|csv)\]/i);
+    if (mExp) actions.push({ t: 'export', a: mExp[1].toLowerCase() });
+    const text = a.replace(/\[(MODE:(Arm|Servo)|PAUSE|RESUME|TIMEOUT|MISSORT|EXPORT:(pdf|xlsx|csv))\]/gi, '').trim();
+    return { text: text || a, actions };
+  }
+  function runRaiActions(actions) {
+    (actions || []).forEach(x => {
+      try {
+        if (x.t === 'mode') {
+          try { $('mode-selector').value = x.a; } catch (e) {}
+          window.changeSortingMode(x.a);
+        }
+        else if (x.t === 'pause') { if (state.aiReady && !state.isPaused) window.togglePause(); }
+        else if (x.t === 'resume') { if (state.aiReady && state.isPaused) window.togglePause(); }
+        else if (x.t === 'timeout') window.forceTimeout();
+        else if (x.t === 'missort') window.logMissort();
+        else if (x.t === 'export') window.doExport(x.a);
+      } catch (e) {}
+    });
+  }
+
+  /* ============================================================
+     STT — rekam mikrofon -> server Whisper (bukan SpeechRecognition browser
+     yang sering gagal / butuh internet). Sekali sentuh: rekam, kirim, berhenti.
+     ============================================================ */
+  let raiRec = null, raiRecStream = null, raiRecT0 = 0, raiRecSend = false;
+  const RAI_REC_MAX_MS = 12000;
+
+  /* Transkode webm/opus -> WAV 16-bit mono di browser.
+     Dipakai sebagai cadangan bila Whisper menolak format webm. */
+  async function blobToWav(blob) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    let ac = null;
+    try {
+      ac = new AC();
+      /* Tanpa perangkat audio, AudioContext bisa jadi 'suspended' dan
+         decodeAudioData hang selamanya -> resume + batas waktu. */
+      try { if (ac.state === 'suspended') await ac.resume(); } catch (e) {}
+      const ab = await blob.arrayBuffer();
+      const buf = await Promise.race([
+        ac.decodeAudioData(ab.slice(0),
+          function ok(b){}, function no(){ throw new Error('decode-fail'); }),
+        new Promise((_, rj) => setTimeout(() => rj(new Error('decode-timeout')), 6000))
+      ]);
+      const ch = Math.min(buf.numberOfChannels, 2);
+      const len = buf.length, sr = buf.sampleRate;
+      const b = new ArrayBuffer(44 + len * ch * 2);
+      const v = new DataView(b);
+      const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+      w(0, 'RIFF'); v.setUint32(4, 36 + len * ch * 2, true); w(8, 'WAVE');
+      w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, ch, true);
+      v.setUint32(24, sr, true); v.setUint32(28, sr * ch * 2, true); v.setUint16(32, ch * 2, true); v.setUint16(34, 16, true);
+      w(36, 'data'); v.setUint32(40, len * ch * 2, true);
+      for (let c = 0; c < ch; c++) {
+        const d = buf.getChannelData(c);
+        for (let i = 0; i < len; i++) {
+          const s = Math.max(-1, Math.min(1, d[i]));
+          v.setInt16(44 + (i * ch + c) * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        }
+      }
+      return new Blob([b], { type: 'audio/wav' });
+    } catch (e) { return null; }
+    finally { try { if (ac) ac.close(); } catch (e) {} }
+  }
+
+  async function sttTranscribe(blob) {
+    /* UTAMAKAN WAV: WebM hasil MediaRecorder sering ditolak Whisper.
+       Rekam -> transkode ke WAV 16-bit di browser -> kirim ke server.
+       Bila decode gagal, kirim format asli sebagai cadangan. */
+    let body = blob;
+    try { const wav = await blobToWav(blob); if (wav) body = wav; } catch (e) {}
+    const ctrl = new AbortController();
+    const to = setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, 30000);
+    try {
+      const r = await fetch('/api/stt', {
+        method: 'POST',
+        headers: { 'Content-Type': body.type || 'audio/wav' },
+        body: body,
+        signal: ctrl.signal
+      });
+      if (!r.ok) throw new Error('STT HTTP ' + r.status);
+      const j = await r.json();
+      if (!j || !j.text) throw new Error('STT kosong');
+      return String(j.text);
+    } finally { clearTimeout(to); }
+  }
+
+  async function raiRecStop(sendIt) {
+    const rec = raiRec;
+    if (!rec) return;
+    raiRecSend = !!sendIt;
+    try { if (rec.state !== 'inactive') rec.stop(); } catch (e) {}
+  }
+
+  window.jarvisListen = () => {
+    if (raiRec) { raiRecStop(true); return; }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') {
+      return showToast(JL('Browser tidak mendukung rekam suara', 'Browser does not support voice recording'));
+    }
+    jarvisMicUI(true);
+    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } })
+      .then((stream) => {
+        raiRecStream = stream;
+        let mime = '';
+        ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus', ''].some(m => {
+          if (!m) return true;
+          if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) { mime = m; return true; }
+          return false;
+        });
+        const rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+        raiRec = rec;
+        raiRecT0 = Date.now();
+        const chunks = [];
+        rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+        rec.onstop = async () => {
+          try { stream.getTracks().forEach(t => t.stop()); } catch (e) {}
+          raiRec = null; raiRecStream = null; jarvisMicUI(false);
+          const secs = (Date.now() - raiRecT0) / 1000;
+          const type = rec.mimeType || mime || 'audio/webm';
+          const blob = new Blob(chunks, { type: type });
+          if (!raiRecSend || !blob.size) return;
+          if (secs < 0.6) {
+            showToast(JL('Terlalu pendek — tahan 1 detik sambil bicara. Ulangi ya.', 'Too short — hold 1s while speaking. Try again.'));
+            return;
+          }
+          try {
+            showToast(JL('Mendengarkan...', 'Transcribing...'));
+            const txt = (await sttTranscribe(blob)).trim();
+            if (!txt) return showToast(JL('Tidak ada suara terdeteksi', 'No speech detected'));
+            const inp = $('jarvis-text');
+            if (inp) inp.value = txt;
+            window.jarvisSend();
+          } catch (e) {
+            showToast(JL('Gagal mengenali suara: ' + (e.message || e), 'Speech recognition failed'));
+          }
+        };
+        rec.start();
+        window.jarvisToggle(true);
+        setTimeout(() => { if (raiRec === rec) raiRecStop(true); }, RAI_REC_MAX_MS);
+      })
+      .catch((e) => {
+        jarvisMicUI(false);
+        const denied = e && (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError');
+        showToast(denied ? JL('Izin mikrofon ditolak', 'Mic permission denied')
+                         : JL('Tidak bisa akses mikrofon', 'Cannot access microphone'));
+      });
+  };
+
+  /* ---- metrik untuk parser & aturan ---- */
+  function jMetricVal(m) {
+    const d = state.sortingData;
+    if (m === 'total') return d.total;
+    if (m === 'error') return d.gagal;
+    return d[m] || 0;
+  }
+  function jSummaryText() {
+    const s = getSummary();
+    return JL(
+      `Total ${s.total} (Kuning ${s.kuning}, Biru ${s.biru}, Merah ${s.merah}, Error ${s.gagal}, sukses ${s.rate}%).`,
+      `Total ${s.total} (Yellow ${s.kuning}, Blue ${s.biru}, Red ${s.merah}, Error ${s.gagal}, success ${s.rate}%).`
+    );
+  }
+
+  /* ---- mesin aturan otomatis ---- */
+  function loadRules() {
+    try { return JSON.parse(localStorage.getItem('rlab_rules') || '[]'); } catch (e) { return []; }
+  }
+  function saveRules(r) {
+    try { localStorage.setItem('rlab_rules', JSON.stringify(r)); } catch (e) {}
+  }
+  function parseRuleCmd(text) {
+    const t = ' ' + text.toLowerCase() + ' ';
+    const has = (...ws) => ws.some(w => t.includes(w));
+    let action = null;
+    const armHit = /mode\s*arm|arm\s*mode|ke\s*arm/.test(t);
+    const servoHit = /mode\s*servo|servo\s*mode|ke\s*servo/.test(t);
+    if (armHit) action = { type: 'mode', arg: 'Arm' };
+    else if (servoHit) action = { type: 'mode', arg: 'Servo' };
+    else if (has('export pdf')) action = { type: 'export', arg: 'pdf' };
+    else if (has('export excel', 'export xlsx')) action = { type: 'export', arg: 'xlsx' };
+    else if (has('export csv')) action = { type: 'export', arg: 'csv' };
+    else if (has('force timeout')) action = { type: 'timeout' };
+    else if (has('jeda', 'pause')) action = { type: 'pause' };
+    else if (has('lanjut', 'resume')) action = { type: 'resume' };
+    if (!action) return null;
+
+    const num = (t.match(/(\d+)/) || [])[1];
+    if (!num) return null;
+    const v = parseInt(num, 10);
+    const maps = [['kuning', 'kuning'], ['yellow', 'kuning'], ['biru', 'biru'], ['blue', 'biru'],
+      ['merah', 'merah'], ['red', 'merah'], ['total', 'total'], ['semua', 'total'],
+      ['error', 'error'], ['eror', 'error'], ['gagal', 'error']];
+    const found = [];
+    maps.forEach(([w, m]) => { if (t.includes(w) && !found.includes(m)) found.push(m); });
+    let conds = [];
+    if (found.includes('total')) conds = [{ m: 'total', op: '>=', v }];
+    else if (found.includes('error')) conds = [{ m: 'error', op: '>=', v }];
+    else if (found.length >= 2) conds = [{ m: found[0], op: '>=', v }, { m: found[1], op: '>=', v, sum: true }];
+    else if (found.length === 1) conds = [{ m: found[0], op: '>=', v }];
+    else return null;
+    return { conds, action };
+  }
+  function ruleFires(rule) {
+    const vals = rule.conds.map(c => jMetricVal(c.m));
+    if (rule.conds.length === 2 && rule.conds[1].sum) return (vals[0] + vals[1]) >= rule.conds[0].v;
+    return vals.every((x, i) => x >= rule.conds[i].v);
+  }
+  function ruleText(rule) {
+    const nm = { kuning: 'Kuning', biru: 'Biru', merah: 'Merah', total: 'Total', error: 'Error' };
+    const c = rule.conds.map(x => `${nm[x.m]} ≥ ${x.v}`).join(rule.conds.length === 2 && rule.conds[1].sum ? ' + ' : ' & ');
+    const a = rule.action.type === 'mode' ? ('mode ' + rule.action.arg)
+      : rule.action.type === 'export' ? ('export ' + rule.action.arg)
+      : rule.action.type;
+    return `${c} → ${a}${rule.enabled ? '' : ' (off)'}`;
+  }
+  function runRuleAction(rule) {
+    const a = rule.action;
+    if (a.type === 'mode') {
+      const cap = a.arg === 'Arm' ? 'Arm' : 'Servo';
+      try { $('mode-selector').value = cap; } catch (e) {}
+      window.changeSortingMode(cap);
+    }
+    else if (a.type === 'timeout') window.forceTimeout();
+    else if (a.type === 'pause') { if (state.aiReady && !state.isPaused) window.togglePause(); }
+    else if (a.type === 'resume') { if (state.aiReady && state.isPaused) window.togglePause(); }
+    else if (a.type === 'export') window.doExport(a.arg);
+  }
+  function checkRules() {
+    const rules = loadRules();
+    if (!rules.length) return;
+    let changed = false;
+    rules.forEach(r => {
+      const fire = r.enabled && ruleFires(r);
+      if (fire && !r.fired) {
+        r.fired = true; changed = true;
+        try { runRuleAction(r); } catch (e) {}
+        const msg = JL(`Aturan jalan: ${ruleText(r)}`, `Rule fired: ${ruleText(r)}`);
+        if (jarvisOpened) { jarvisSay(msg); try { showToast(msg); } catch (e) {} }
+        logActivity('fas fa-robot', 'background:rgba(198,154,69,.18);color:#97742a', 'R-AI: Aturan Jalan', ruleText(r));
+      } else if (!fire && r.fired) { r.fired = false; changed = true; }
+    });
+    if (changed) saveRules(rules);
+  }
+
+  /* ---- proses perintah: reset lokal (aman) → R-AI mikir → parser offline ---- */
+  async function handleResetConfirm(raw) {
+    const t = ' ' + raw.toLowerCase().trim() + ' ';
+    const has = (...ws) => ws.some(w => t.includes(w));
+    if (jarvisPending === 'reset' && has('ya', 'yes', 'yakin', 'ok')) {
+      jarvisPending = null;
+      window.resetData();
+      jarvisSay(JL('Baik, reset dijalankan.', 'OK, reset executed.'));
+      return true;
+    }
+    if (jarvisPending === 'reset' && has('batal', 'tidak', 'cancel', 'no')) {
+      jarvisPending = null;
+      jarvisSay(JL('Reset dibatalkan.', 'Reset cancelled.'));
+      return true;
+    }
+    jarvisPending = null;
+    return false;
+  }
+  window.jarvisSend = async () => {
+    const inp = $('jarvis-text');
+    const raw = (inp.value || '').trim();
+    if (!raw) return;
+    inp.value = '';
+    jarvisAddMsg(raw, 'user');
+    try { if (await handleResetConfirm(raw)) return; } catch (e) {}
+    const typing = jarvisAddMsg('...', 'bot');
+    let raiErr = null;
+    try {
+      const res = await askRai(raw);
+      if (typing) typing.remove();
+      runRaiActions(res.actions);
+      jarvisSay(res.text || JL('Siap.', 'Done.'), true, 'Model');
+      return;
+    } catch (e) {
+      if (typing) typing.remove();
+      raiErr = e;
+    }
+    let handled = false;
+    try { handled = await processCommand(raw); } catch (e) { handled = false; }
+    if (handled) return;
+    try {
+      const kr = window.raiKnowledgeReply ? window.raiKnowledgeReply(raw, state.sortingData, state.lang) : null;
+      if (kr) { jarvisSay(kr); return; }
+    } catch (e) {}
+    jarvisSay(localOfflineReply());
+  };
+
+  /* Jawaban lokal pamungkas: selalu jawab dari data mesin walau semua API mati. */
+  function localOfflineReply() {
+    return JL('Mode lokal: AI online tidak terjangkau, tapi saya tetap jawab dari data mesin. ' + jSummaryText() + ' Tanya saya soal status, total, warna (kuning/biru/merah), error, atau istilah seperti servo, kamera, dan konveyor.',
+      'Local mode: online AI unreachable, but I still answer from machine data. ' + jSummaryText() + ' Ask me about status, total, colours (yellow/blue/red), errors, or terms like servo, camera, and conveyor.');
+  }
+
+  async function processCommand(raw) {
+    const t = ' ' + raw.toLowerCase().trim() + ' ';
+    const has = (...ws) => ws.some(w => t.includes(w));
+    const d = state.sortingData;
+
+    if (jarvisPending === 'reset' && has('ya', 'yes', 'yakin', 'ok')) {
+      jarvisPending = null;
+      window.resetData();
+      jarvisSay(JL('Baik, reset dijalankan.', 'OK, reset executed.'));
+      return true;
+    }
+    if (jarvisPending === 'reset' && has('batal', 'tidak', 'cancel', 'no')) {
+      jarvisPending = null;
+      jarvisSay(JL('Reset dibatalkan.', 'Reset cancelled.'));
+      return true;
+    }
+    jarvisPending = null;
+
+    if (has('halo', 'hallo', 'hai', 'hello', 'hi ', 'pagi', 'siang', 'sore', 'malam', 'hei')) {
+      jarvisSay(JL('Halo juga! Saya R-AI dari R-LAB. Mau cek status atau perintahkan sesuatu?', 'Hello! I am R-AI from R-LAB. Check status or command something?'));
+      return true;
+    }
+    if (/kamu (ai|siapa)|siapa kamu|kamu (itu )?apa|nama kamu|namamu|what are you|who are you|your name/.test(t)) {
+      jarvisSay(JL(
+        'Saya R-AI — AI buatan R-LAB, gabungan dari beberapa model AI, asisten resmi sistem sortir pintar ini.',
+        'I am R-AI — an AI by R-LAB, a combination of several AI models, the official assistant of this sorting system.'
+      ));
+      return true;
+    }
+    if (has('database apa', 'database yang', 'database mana', 'data apa', 'isi database', 'lihat database', 'password', 'api key', 'apikey', 'kunci', 'kredensial', 'credential', 'token rahasia')) {
+      jarvisSay(JL(
+        'Maaf, itu privasi — saya tidak bisa membagikan info database atau kredensial apa pun.',
+        'Sorry, that is private — I cannot share any database or credential info.'
+      ));
+      return true;
+    }
+    if (has('bantuan', 'help', 'bisa apa', 'perintah')) {
+      jarvisSay(JL(
+        'Bisa: status/total/warna/error • ubah mode arm-servo • jeda/lanjut AI • force timeout • catat missort • export xlsx-pdf-csv • hubungkan database • buat-lihat-hapus aturan. Ketuk ikon mic untuk bicara.',
+        'I can: status/total/colors/error • change arm-servo mode • pause/resume AI • force timeout • log missort • export xlsx-pdf-csv • connect database • make-list-delete rules. Tap the mic icon to speak.'
+      ));
+      return true;
+    }
+    if (has('total berapa', 'berapa total', 'how many total', 'total?')) {
+      jarvisSay(JL(`Total diproses ${d.total} barang. ${jSummaryText()}`, `Total processed ${d.total} items. ${jSummaryText()}`));
+      return true;
+    }
+    if (has('kuning') && has('berapa', 'jumlah', 'how many')) {
+      jarvisSay(JL(`Kuning: ${d.kuning}.`, `Yellow: ${d.kuning}.`)); return true;
+    }
+    if (has('biru') && has('berapa', 'jumlah', 'how many', 'blue')) {
+      jarvisSay(JL(`Biru: ${d.biru}.`, `Blue: ${d.biru}.`)); return true;
+    }
+    if (has('merah') && has('berapa', 'jumlah', 'how many', 'red')) {
+      jarvisSay(JL(`Merah: ${d.merah}.`, `Red: ${d.merah}.`)); return true;
+    }
+    if (has('error', 'eror', 'gagal')) {
+      if (has('berapa', 'jumlah', 'how many')) {
+        jarvisSay(JL(`Error tercatat ${d.gagal} kali.`, `Errors logged ${d.gagal} times.`)); return true;
+      }
+      window.logMissort();
+      jarvisSay(JL('Error dicatat.', 'Error logged.')); return true;
+    }
+    if (has('status', 'ringkasan', 'laporan', 'summary', 'report')) {
+      jarvisSay(jSummaryText()); return true;
+    }
+    if (has('mode apa', 'mode saat', 'current mode', 'mode sekarang')) {
+      const m = $('mode-selector').value;
+      jarvisSay(JL(`Mode sortir saat ini: ${m}.`, `Current sorting mode: ${m}.`)); return true;
+    }
+    if (has('arm') && has('ubah', 'ganti', 'change', 'pindah', 'mode', 'set')) {
+      try { $('mode-selector').value = 'Arm'; } catch (e) {}
+      window.changeSortingMode('Arm');
+      jarvisSay(JL('Mode diubah ke Arm.', 'Mode changed to Arm.')); return true;
+    }
+    if (has('servo') && has('ubah', 'ganti', 'change', 'pindah', 'mode', 'set')) {
+      try { $('mode-selector').value = 'Servo'; } catch (e) {}
+      window.changeSortingMode('Servo');
+      jarvisSay(JL('Mode diubah ke Servo.', 'Mode changed to Servo.')); return true;
+    }
+    if (has('jeda', 'pause', 'henti')) {
+      if (state.aiReady && !state.isPaused) { window.togglePause(); jarvisSay(JL('AI dijeda.', 'AI paused.')); }
+      else jarvisSay(JL('AI belum jalan atau sudah dijeda.', 'AI is not running or already paused.'));
+      return true;
+    }
+    if (has('lanjut', 'resume', 'terus')) {
+      if (state.aiReady && state.isPaused) { window.togglePause(); jarvisSay(JL('AI dilanjutkan.', 'AI resumed.')); }
+      else jarvisSay(JL('AI belum jalan atau tidak dijeda.', 'AI is not running or not paused.'));
+      return true;
+    }
+    if (has('matikan kamera', 'stop camera', 'stop kamera')) {
+      if (window.stopCamera) { window.stopCamera(); jarvisSay(JL('Kamera dimatikan.', 'Camera stopped.')); }
+      else jarvisSay(JL('Perintah tidak tersedia.', 'Command unavailable.'));
+      return true;
+    }
+    if (has('force timeout', 'paksa timeout')) {
+      window.forceTimeout();
+      jarvisSay(JL('Force timeout dijalankan (kalau ada objek diproses).', 'Force timeout executed (if an object is processing).'));
+      return true;
+    }
+    if (has('missort', 'miss-sort', 'salah sortir')) {
+      window.logMissort();
+      jarvisSay(JL('Miss-sort dicatat.', 'Miss-sort logged.')); return true;
+    }
+    if (has('export')) {
+      if (has('pdf')) window.doExport('pdf');
+      else if (has('excel', 'xlsx')) window.doExport('xlsx');
+      else if (has('csv')) window.doExport('csv');
+      else { window.openExportModal(); jarvisSay(JL('Pilih format export.', 'Choose an export format.')); return true; }
+      jarvisSay(JL('Export dijalankan.', 'Export started.')); return true;
+    }
+    if (has('hubungkan database', 'connect database', 'konek database', 'connect db', 'database')) {
+      window.openModal('fb-modal');
+      jarvisSay(JL('Silakan klik CONNECT TO DATABASE sampai hijau.', 'Please click CONNECT TO DATABASE until green.'));
+      return true;
+    }
+    if (has('reset')) {
+      jarvisPending = 'reset';
+      jarvisSay(JL('Yakin reset semua data? Jawab "ya" atau "batal".', 'Sure to reset all data? Answer "yes" or "cancel".'));
+      return true;
+    }
+    if (has('hubungkan bluetooth', 'connect bluetooth', 'konek bt', 'microbit')) {
+      try { $('btn-conn-bt').click(); jarvisSay(JL('Membuka koneksi Bluetooth...', 'Opening Bluetooth connection...')); }
+      catch (e) { jarvisSay(JL('Gagal membuka Bluetooth.', 'Failed to open Bluetooth.')); }
+      return true;
+    }
+    if (has('lihat aturan', 'daftar aturan', 'list rule', 'show rule', 'aturanku')) {
+      const rules = loadRules();
+      if (!rules.length) jarvisSay(JL('Belum ada aturan. Contoh: "buat aturan kalau error 50 maka mode arm".', 'No rules yet. Example: "make a rule if error 50 then arm mode".'));
+      else jarvisSay(JL('Aturan:\n', 'Rules:\n') + rules.map((r, i) => `${i + 1}. ${ruleText(r)}`).join('\n'));
+      return true;
+    }
+    const delM = t.match(/(?:hapus|delete|remove).{0,12}aturan\s*(\d+)|aturan\s*(\d+).{0,12}(?:hapus|delete)/);
+    if (delM) {
+      const n = parseInt(delM[1] || delM[2], 10);
+      const rules = loadRules();
+      if (n >= 1 && n <= rules.length) {
+        const gone = rules.splice(n - 1, 1)[0];
+        saveRules(rules);
+        jarvisSay(JL(`Aturan ${n} dihapus (${ruleText(gone)}).`, `Rule ${n} deleted (${ruleText(gone)}).`));
+      } else jarvisSay(JL('Nomor aturan tidak ada.', 'Rule number not found.'));
+      return true;
+    }
+    const togM = t.match(/aturan\s*(\d+)\s*(off|on|mati|nyala|aktif|nonaktif)/);
+    if (togM) {
+      const n = parseInt(togM[1], 10);
+      const rules = loadRules();
+      if (n >= 1 && n <= rules.length) {
+        const on = /on|nyala|aktif/.test(togM[2]) && !/nonaktif/.test(t);
+        rules[n - 1].enabled = on; rules[n - 1].fired = false;
+        saveRules(rules);
+        jarvisSay(JL(`Aturan ${n} ${on ? 'diaktifkan' : 'dimatikan'}.`, `Rule ${n} ${on ? 'enabled' : 'disabled'}.`));
+      } else jarvisSay(JL('Nomor aturan tidak ada.', 'Rule number not found.'));
+      return true;
+    }
+    if (has('buat aturan', 'bikin aturan', 'tambah aturan', 'make a rule', 'create rule', 'buat rule')) {
+      const parsed = parseRuleCmd(raw);
+      if (!parsed) {
+        jarvisSay(JL(
+          'Format: "buat aturan kalau <warna/total/error> <angka> maka <aksi>". Aksi: mode arm, mode servo, export pdf/xlsx/csv, force timeout, jeda AI, lanjut AI.',
+          'Format: "make a rule if <color/total/error> <number> then <action>". Actions: arm mode, servo mode, export pdf/xlsx/csv, force timeout, pause AI, resume AI.'
+        ));
+        return true;
+      }
+      const rules = loadRules();
+      rules.push({ conds: parsed.conds, action: parsed.action, enabled: true, fired: false, text: raw });
+      saveRules(rules);
+      jarvisSay(JL(`Aturan ${rules.length} dibuat: ${ruleText(rules[rules.length - 1])}.`, `Rule ${rules.length} created: ${ruleText(rules[rules.length - 1])}.`));
+      return true;
+    }
+    return false;
+  }
+
+  /* ================================================================== */
+  /*  BOOT                                                               */
+  /* ================================================================== */
+  (function boot() {
+    try {
+      const sl = localStorage.getItem('rlab_lang'); if (sl === 'id' || sl === 'en') state.lang = sl;
+      const st = localStorage.getItem('rlab_theme'); if (st === 'dark' || st === 'light') state.theme = st;
+      const sb = localStorage.getItem('rlab_bar');
+      if (sb === 'left' || sb === 'right' || sb === 'top') state.barPos = sb;
+      else if (sb === 'bottom') state.barPos = 'top';
+      try { if (sessionStorage.getItem('rlab_admin_auth') === '1') hideGate(); } catch (e) {}
+    } catch (e) {}
+
+    applyTheme();
+    applyBarPosition();
+    applyLanguage();
+    syncSettingsUI();
+    try { initChart(); } catch (e) { console.warn(e); }
+    try { updateUIStats(); } catch (e) { console.warn(e); }
+    try { updateChart(); } catch (e) {}
+    try { renderFeed(); } catch (e) {}
+    try { ensureTMLibs().catch(() => {}); } catch (e) {}
+    try { pickRaiVoice(); if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = pickRaiVoice; } catch (e) {}
+
+    setTimeout(() => showToast(state.lang === 'id' ? 'Sistem siap · R-LAB' : 'System ready · R-LAB'), 700);
+  })();
+  </script>
+  </body>
+  </html>

@@ -1,0 +1,1638 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1a2456">
+<meta name="description" content="R-LAB — Mode Guest. Pantau data sorting secara realtime, read-only.">
+<link rel="icon" type="image/png" href="logo.png">
+<link rel="apple-touch-icon" href="logo.png">
+<title>R-LAB · Mode Guest (Lihat Saja)</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = { darkMode: 'class' };</script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Inter self-hosted (lokal) — supaya tidak 404 dan tetap jalan tanpa internet */
+@font-face{font-family:'Inter';font-style:normal;font-weight:100 900;font-display:swap;
+  src:url('assets/fonts/Inter-Variable.woff2') format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+</style>
+
+<!-- Rich Export Libraries (guest: baca saja, tidak menulis ke Firebase) -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+<style>
+:root{
+  --bg:#f4f6f9; --surface:#ffffff; --surface-solid:#ffffff;
+  --surface-soft:#eef2f7;
+  --border:#e2e8f0; --text:#0f172a; --muted:#64748b;
+  --brand:#1a2456;
+  --gold:#c69a45; --gold-soft:#f8efdb;
+  --shadow:0 1px 2px rgba(15,23,42,.06),0 10px 28px -18px rgba(15,23,42,.22);
+}
+html.dark{
+  --bg:#0b1220; --surface:#121d33; --surface-solid:#16233f;
+  --surface-soft:rgba(148,163,184,.12);
+  --border:rgba(148,163,184,.18); --text:#e8eef7; --muted:#94a3b8;
+  --brand:#5a86d6;
+  --gold:#d4af5e; --gold-soft:rgba(198,154,69,.14);
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 14px 30px -18px rgba(0,0,0,.7);
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  overflow:hidden; -webkit-font-smoothing:antialiased;
+  transition:background .25s ease,color .25s ease;
+}
+.t-main{color:var(--text);} .t-muted{color:var(--muted);}
+.font-display{font-family:'Inter',system-ui,sans-serif;letter-spacing:-.02em;}
+
+#app-shell{position:relative;z-index:1;display:flex;height:100vh;height:100dvh;width:100%;background:var(--bg);}
+.main-area{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0;}
+
+#sidebar{
+  width:264px;flex:0 0 264px;display:none;flex-direction:column;gap:1rem;
+  padding:1.25rem;height:100%;overflow-y:auto;
+  border-right:1px solid var(--border);background:var(--surface);
+}
+@media(min-width:1024px){#sidebar{display:flex;}}
+
+.topbar{
+  display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;
+  padding:.6rem .85rem;border-bottom:1px solid var(--border);
+  background:var(--surface);flex:0 0 auto;z-index:20;
+  box-shadow:inset 0 -2px 0 var(--gold);
+}
+@media(min-width:1024px){.topbar{padding:.7rem 1.4rem;gap:.75rem;}}
+.status-group{display:flex;align-items:center;gap:.4rem;flex:1 1 auto;min-width:0;overflow-x:auto;scrollbar-width:none;}
+.status-group::-webkit-scrollbar{display:none;}
+.topbar-actions{display:flex;align-items:center;gap:.45rem;margin-left:auto;flex:0 0 auto;}
+
+.scroll-area{flex:1;overflow-y:auto;overflow-x:hidden;padding:1rem;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;}
+@media(min-width:768px){.scroll-area{padding:1.5rem;}}
+@media(min-width:1280px){.scroll-area{padding:2rem;}}
+.page{max-width:1220px;margin-inline:auto;width:100%;animation:pageIn .3s ease-out both;}
+@keyframes pageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes cardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.page .card{animation:cardIn .3s ease-out both;}
+@keyframes logIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes metricPop{0%{transform:scale(1)}40%{transform:scale(1.06)}100%{transform:scale(1)}}
+.metric-value.pop{animation:metricPop .3s ease-out;}
+
+.card{
+  background:var(--surface);border:1px solid var(--border);border-radius:1rem;
+  box-shadow:var(--shadow);transition:transform .22s ease,border-color .22s ease;
+}
+.card-hover:hover{transform:translateY(-2px);border-color:#e3cf9a;}
+.card-title{font-weight:800;font-size:.82rem;display:flex;align-items:center;gap:.5rem;}
+.card-title i{color:var(--brand);}
+
+.pill{
+  font-size:.58rem;font-weight:800;letter-spacing:.05em;padding:.3rem .6rem;
+  border-radius:999px;background:var(--surface-soft);color:var(--muted);
+  border:1px solid var(--border);white-space:nowrap;transition:.25s;
+}
+.pill.on{background:#dcfce7;color:#15803d;border-color:#86efac;}
+.pill.blue{background:#dbe4f5;color:#1a2456;border-color:#b3c3e2;}
+.pill.warn{background:#fef3c7;color:#b45309;border-color:#fcd34d;}
+html.dark .pill.on{color:#4ade80;} html.dark .pill.blue{color:#60a5fa;} html.dark .pill.warn{color:#facc15;}
+
+.metric-value{font-size:clamp(1.5rem,4vw,2rem);font-weight:800;line-height:1.05;letter-spacing:-.02em;}
+.metric-label{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);}
+.metric-icon{width:38px;height:38px;border-radius:.8rem;display:flex;align-items:center;justify-content:center;font-size:.95rem;margin-bottom:.65rem;}
+
+.icon-btn{
+  width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;
+  border-radius:.7rem;background:var(--surface);border:1px solid var(--border);
+  color:var(--muted);cursor:pointer;transition:background .2s ease,color .2s ease;flex:0 0 auto;
+}
+.icon-btn:hover{color:var(--brand);border-color:#e3cf9a;background:var(--gold-soft);}
+html.dark .icon-btn:hover{background:rgba(198,154,69,.12);}
+.btn-primary{background:var(--brand);color:#fff;font-weight:700;border-radius:.75rem;border:none;cursor:pointer;transition:background .2s ease;}
+.btn-primary:hover{background:#101c44;}
+.side-btn{
+  display:flex;align-items:center;gap:.75rem;width:100%;padding:.7rem .85rem;
+  border-radius:.75rem;color:var(--muted);font-weight:600;font-size:.83rem;
+  background:transparent;border:1px solid transparent;cursor:pointer;text-align:left;
+  position:relative;overflow:hidden;
+  transition:background .2s ease,color .2s ease,transform .15s ease;
+}
+.side-btn i{transition:transform .2s ease;}
+.side-btn:hover{background:var(--surface-soft);color:var(--text);}
+.side-btn:hover i{transform:translateX(2px);}
+.side-btn:active{transform:scale(.97);}
+.side-btn::after{
+  content:'';position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:999px;
+  background:var(--gold);transform:scaleY(0);transform-origin:top;transition:transform .22s ease;
+}
+.side-btn.active{background:var(--gold-soft);color:var(--brand);}
+.side-btn.active::after{transform:scaleY(1);}
+.side-btn.active i{animation:iconPop .35s ease-out;}
+html.dark .side-btn.active{background:rgba(198,154,69,.14);}
+html.dark .side-btn:hover{background:rgba(148,163,184,.12);color:var(--text);}
+@keyframes iconPop{0%{transform:scale(.6)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+@keyframes drawerItem{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
+
+.log-item{
+  display:flex;align-items:center;gap:.7rem;padding:.6rem .7rem;border-radius:.8rem;
+  background:var(--surface);border:1px solid var(--border);animation:logIn .28s ease-out;
+}
+.log-ico{width:30px;height:30px;border-radius:.65rem;display:flex;align-items:center;justify-content:center;font-size:.7rem;flex:0 0 auto;}
+.live-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite;}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.55)}70%{box-shadow:0 0 0 10px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+
+#btn-menu{display:inline-flex;}
+@media(min-width:1024px){#btn-menu{display:none!important;}}
+#drawer-backdrop{position:fixed;inset:0;z-index:140;background:rgba(15,23,42,.45);opacity:0;pointer-events:none;transition:opacity .28s ease;}
+#drawer-backdrop.show{opacity:1;pointer-events:auto;}
+#mobile-drawer{
+  position:fixed;top:0;left:0;bottom:0;z-index:150;width:min(320px,86vw);
+  display:flex;flex-direction:column;gap:1rem;background:var(--surface-solid);
+  border-right:1px solid var(--border);padding:1.1rem;
+  padding-top:calc(1.1rem + env(safe-area-inset-top,0px));
+  transform:translateX(-103%);transition:transform .32s ease-out;overflow-y:auto;
+}
+#mobile-drawer.open{transform:translateX(0);}
+@media(min-width:1024px){#mobile-drawer,#drawer-backdrop{display:none!important;}}
+.mnav-btn{
+  display:flex;align-items:center;gap:.8rem;width:100%;padding:.85rem .95rem;border-radius:.75rem;
+  font-size:.85rem;font-weight:700;color:var(--muted);background:transparent;border:none;cursor:pointer;min-height:48px;
+  position:relative;overflow:hidden;
+  transition:background .2s ease,color .2s ease,transform .15s ease;
+}
+.mnav-btn i{transition:transform .2s ease;}
+.mnav-btn:hover{background:var(--surface-soft);color:var(--text);}
+.mnav-btn:hover i{transform:translateX(2px);}
+.mnav-btn:active{transform:scale(.97);}
+.mnav-btn::after{
+  content:'';position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:999px;
+  background:var(--gold);transform:scaleY(0);transform-origin:top;transition:transform .22s ease;
+}
+.mnav-btn.active{background:var(--gold-soft);color:var(--brand);}
+.mnav-btn.active::after{transform:scaleY(1);}
+.mnav-btn.active i{animation:iconPop .35s ease-out;}
+html.dark .mnav-btn.active{background:rgba(198,154,69,.14);}
+html.dark .mnav-btn:hover{background:rgba(148,163,184,.12);color:var(--text);}
+#mobile-drawer.open .mnav-btn{animation:drawerItem .28s ease-out both;}
+#mobile-drawer.open nav .mnav-btn:nth-child(2){animation-delay:.05s;}
+
+#toast{
+  position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));right:16px;left:16px;z-index:500;
+  display:flex;justify-content:flex-end;pointer-events:none;
+  transform:translateY(140%);transition:transform .3s ease-out;max-width:calc(100vw - 32px);margin-left:auto;
+}
+@media(min-width:640px){#toast{left:auto;}}
+#toast.show{transform:translateY(0);}
+.toast-inner{
+  background:#0f172a;color:#fff;padding:.8rem 1.1rem;border-radius:.8rem;font-size:.75rem;font-weight:600;
+  display:flex;align-items:center;gap:.6rem;pointer-events:auto;border:1px solid rgba(148,163,184,.25);max-width:100%;
+}
+.modal{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;padding:1rem;}
+.modal.open{display:flex;}
+.modal-backdrop{position:absolute;inset:0;background:rgba(15,23,42,.5);}
+.modal-panel{
+  position:relative;z-index:1;width:100%;max-width:540px;max-height:88vh;overflow-y:auto;
+  border-radius:1rem;padding:1.5rem;background:var(--surface-solid);
+  border:1px solid var(--border);box-shadow:var(--shadow);animation:modalIn .3s ease-out both;
+}
+@keyframes modalIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@media(max-width:640px){
+  .modal{align-items:flex-end;padding:0;}
+  .modal-panel{max-width:100%;width:100%;max-height:92dvh;border-radius:1.4rem 1.4rem 0 0;padding:1.25rem 1.1rem calc(1.25rem + env(safe-area-inset-bottom,0px));border-bottom:none;}
+  .modal-panel::before{content:'';display:block;width:44px;height:5px;border-radius:999px;background:rgba(148,163,184,.45);margin:0 auto .9rem;}
+}
+.export-tile{
+  display:flex;flex-direction:column;align-items:center;gap:.3rem;padding:1.1rem .6rem;
+  border-radius:.9rem;background:var(--surface);border:1px solid var(--border);
+  cursor:pointer;transition:transform .2s ease,border-color .2s ease;color:var(--text);
+}
+.export-tile i{font-size:1.4rem;margin-bottom:.15rem;}
+.export-tile span{font-size:.78rem;font-weight:700;}
+.export-tile small{font-size:.58rem;color:var(--muted);font-weight:600;letter-spacing:.04em;}
+.export-tile:hover{transform:translateY(-2px);border-color:#e3cf9a;}
+@keyframes tileIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+.modal.open .export-tile{animation:tileIn .35s ease-out both;}
+.modal.open .export-tile:nth-child(2){animation-delay:.06s;}
+.modal.open .export-tile:nth-child(3){animation-delay:.12s;}
+.modal.open .export-tile:nth-child(4){animation-delay:.18s;}
+.metric-value,.font-mono{font-variant-numeric:tabular-nums;}
+.guest-export-banner{
+  background:#dc2626;color:#fff;border-radius:.8rem;
+  padding:.8rem 1rem;text-align:center;
+  font-weight:800;font-size:1.05rem;letter-spacing:.08em;
+}
+#jarvis-fab{
+  position:fixed;right:16px;bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:160;
+  width:56px;height:56px;border-radius:50%;border:2px solid var(--gold);
+  background:var(--brand);color:#fff;font-size:1.25rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 12px 30px -10px rgba(15,23,42,.55);
+  transition:transform .2s ease;
+}
+#jarvis-fab:hover{transform:translateY(-2px) scale(1.03);}
+#jarvis-fab:active{transform:scale(.95);}
+#jarvis-fab.listening{background:#dc2626;border-color:#fecaca;animation:jarvisPulse 1.2s infinite;}
+@keyframes jarvisPulse{0%{box-shadow:0 0 0 0 rgba(220,38,38,.5)}70%{box-shadow:0 0 0 14px rgba(220,38,38,0)}100%{box-shadow:0 0 0 0 rgba(220,38,38,0)}}
+@keyframes logIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes modalIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+#jarvis-panel{
+  position:fixed;z-index:160;right:16px;bottom:calc(142px + env(safe-area-inset-bottom,0px));
+  width:min(370px,calc(100vw - 32px));height:min(500px,calc(100dvh - 220px));min-height:340px;
+  display:none;flex-direction:column;overflow:hidden;
+  background:var(--surface-solid);border:1px solid var(--border);
+  border-top:3px solid var(--gold);border-radius:1rem;box-shadow:var(--shadow);
+}
+#jarvis-panel.open{display:flex;animation:modalIn .3s ease-out both;}
+.jarvis-head{display:flex;align-items:center;gap:.6rem;padding:.7rem .85rem;border-bottom:1px solid var(--border);flex:0 0 auto;}
+.jarvis-head img{width:32px;height:32px;border-radius:.6rem;object-fit:cover;border:1px solid var(--border);}
+.jarvis-head .t{flex:1;min-width:0;line-height:1.2;}
+.jarvis-head .t b{font-size:.82rem;display:block;}
+.jarvis-head .t small{font-size:.62rem;color:var(--muted);}
+.jarvis-msgs{flex:1;overflow-y:auto;padding:.7rem .8rem;display:flex;flex-direction:column;gap:.5rem;}
+.jarvis-msg{max-width:88%;padding:.55rem .75rem;border-radius:.9rem;font-size:.76rem;line-height:1.45;animation:logIn .25s ease-out;}
+.jarvis-msg.bot{background:var(--surface-soft);border:1px solid var(--border);align-self:flex-start;border-top-left-radius:.25rem;}
+.jarvis-msg.user{background:var(--brand);color:#fff;align-self:flex-end;border-top-right-radius:.25rem;}
+.jarvis-src{display:block;font-size:.6rem;font-weight:700;letter-spacing:.05em;margin-top:.3rem;opacity:.55;}
+/* Mode terang: teks chat dipaksa gelap agar hurufnya jelas,
+   pesan bot diberi latar putih + bayangan tipis supaya kontras. */
+html:not(.dark) .jarvis-msg.bot{color:#0f172a;font-weight:500;}
+  html.dark .jarvis-msg.bot{color:#e8eef7;}
+  html:not(.dark) .jarvis-msg.bot{background:#ffffff;border-color:#dbe3ea;box-shadow:0 1px 3px rgba(15,23,42,.08);}
+  html:not(.dark) .jarvis-input .inp{color:#0f172a;}
+  html.dark .jarvis-input .inp{color:#e8eef7;}
+  html:not(.dark) .jarvis-input .inp::placeholder{color:#64748b;}
+  html.dark .jarvis-input .inp::placeholder{color:#94a3b8;}
+  html:not(.dark) .jarvis-chip{color:#374151;}
+  html.dark .jarvis-chip{color:#cbd5e1;}
+.jarvis-chips{display:flex;gap:.35rem;overflow-x:auto;padding:.45rem .8rem;scrollbar-width:none;flex:0 0 auto;}
+.jarvis-chips::-webkit-scrollbar{display:none;}
+.jarvis-chip{flex:0 0 auto;font-size:.64rem;font-weight:700;padding:.35rem .65rem;border-radius:999px;border:1px solid var(--border);background:var(--surface-soft);color:var(--muted);cursor:pointer;white-space:nowrap;}
+.jarvis-chip:hover{color:var(--brand);border-color:#e3cf9a;}
+  .jarvis-input .inp, .inp{
+    width:100%;padding:.6rem .8rem;border-radius:.8rem;border:1px solid var(--border);
+    background:var(--surface-soft);color:var(--text);font-size:.76rem;font-weight:600;
+    outline:none;transition:.25s;
+  }
+  .inp::placeholder{color:var(--muted);font-weight:500;}
+  .inp:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(198,154,69,.22);}
+.jarvis-input{display:flex;gap:.4rem;padding:.55rem .7rem;border-top:1px solid var(--border);flex:0 0 auto;}
+.jarvis-input .inp{margin:0;}
+
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
+::-webkit-scrollbar{width:8px;height:8px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:10px;}
+</style>
+</head>
+
+<body>
+<div id="app-shell">
+
+  <!-- SIDEBAR (desktop) -->
+  <aside id="sidebar">
+    <div class="flex items-center gap-3 px-1">
+      <img src="logo.png" alt="Logo R-LAB" class="w-10 h-10 rounded-xl shrink-0" style="object-fit:cover;border:1px solid var(--border)">
+      <div class="leading-tight">
+        <p class="font-display font-extrabold text-[15px]">R-LAB</p>
+        <p class="text-[10px] font-semibold t-muted" data-i18n="brand.tag">Smart Sorting System</p>
+      </div>
+    </div>
+
+    <div class="rounded-xl px-3 py-2 text-[11px] font-bold" style="background:#e8effe;color:var(--brand)">
+      <i class="fas fa-eye mr-1"></i><span data-i18n="guest.badge">Mode Guest — Lihat Saja</span>
+    </div>
+
+    <nav class="flex flex-col gap-1.5 mt-1">
+      <button class="side-btn active" onclick="document.querySelector('.scroll-area').scrollTo({top:0,behavior:'smooth'})">
+        <i class="fas fa-chart-line"></i><span data-i18n="nav.dash">Dasbor Pabrik</span>
+      </button>
+      <button class="side-btn" onclick="document.getElementById('guest-dev').scrollIntoView({behavior:'smooth',block:'center'})">
+        <i class="fas fa-users"></i><span data-i18n="guest.dev">Developer</span>
+      </button>
+    </nav>
+
+    <div class="mt-auto rounded-xl p-4 border" style="background:var(--surface-soft);border-color:var(--border)">
+      <p class="text-[10px] font-bold" style="color:var(--brand)">Read-only</p>
+      <p class="text-[11px] t-muted mt-1 leading-relaxed" data-i18n="guest.note">Mode guest tidak bisa mengubah data. Semua angka mengikuti Firebase admin otomatis.</p>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main-area">
+    <header class="topbar">
+      <button id="btn-menu" class="icon-btn" aria-label="Buka menu" aria-expanded="false" onclick="window.toggleDrawer(true)">
+        <i class="fas fa-bars text-sm"></i>
+      </button>
+      <img src="logo.png" alt="Logo R-LAB" class="w-9 h-9 rounded-lg shrink-0 lg:hidden" style="object-fit:cover;border:1px solid var(--border)">
+
+      <div class="status-group" role="status" aria-label="Status koneksi">
+        <div id="status-fb" class="pill">FB: MENGHUBUNGKAN...</div>
+        <div id="status-delay" class="pill blue">±0.5 dtk</div>
+      </div>
+
+      <div class="topbar-actions">
+        <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl border" style="background:var(--surface-soft);border-color:var(--border)">
+          <i class="fas fa-clock text-[10px]" style="color:var(--brand)"></i>
+          <span id="live-clock" class="font-mono text-xs font-bold">00:00:00</span>
+        </div>
+        <button class="icon-btn" title="Back to Home" onclick="window.goHome()"><i class="fas fa-house text-xs"></i></button>
+        <button id="lang-btn" class="icon-btn" title="ID/EN" onclick="window.toggleLang()" style="width:auto;padding:0 .7rem;font-size:.7rem;font-weight:800;">ID</button>
+        <button class="icon-btn" title="Tema" onclick="window.toggleTheme()"><i class="fas fa-moon text-xs"></i></button>
+        <button id="btn-retry" class="btn-primary px-3 py-2 text-[11px] font-bold hidden" onclick="window.connectFB()">HUBUNGKAN ULANG</button>
+      </div>
+    </header>
+
+    <div class="scroll-area">
+      <section class="page">
+        <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-5">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="live-dot"></span>
+              <span class="text-[10px] font-bold uppercase" style="color:var(--brand);letter-spacing:.15em;" data-i18n="dash.live">Live Production — Guest</span>
+            </div>
+            <h1 class="text-xl md:text-2xl font-extrabold tracking-tight" data-i18n="dash.title">Dasbor Pabrik Pintar</h1>
+            <p class="text-xs t-muted mt-1"><span data-i18n="dash.sub">Data sorting realtime dari Firebase.</span> <span data-i18n="guest.sync">Sinkron ±0.5 detik mengikuti mode admin.</span></p>
+          </div>
+          <div class="text-xs t-muted">Update terakhir: <span id="last-sync" class="font-mono font-bold t-main">—</span></div>
+        </div>
+
+        <!-- METRICS -->
+        <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 mb-5">
+          <div class="card card-hover p-4 sm:p-5">
+            <div class="metric-icon" style="background:var(--gold-soft);color:#8a6d1f"><i class="fas fa-boxes-stacked"></i></div>
+            <p class="metric-label" data-i18n="metric.total">Total Diproses</p>
+            <p id="stat-total" class="metric-value mt-1" style="color:var(--brand)">0</p>
+          </div>
+          <div class="card card-hover p-4 sm:p-5">
+            <div class="metric-icon" style="background:#fef3c7;color:#b45309"><i class="fas fa-circle"></i></div>
+            <p class="metric-label" data-i18n="metric.yellow">Kuning</p>
+            <p id="stat-kuning" class="metric-value mt-1 t-main">0</p>
+          </div>
+          <div class="card card-hover p-4 sm:p-5">
+            <div class="metric-icon" style="background:#dbe4f5;color:#1a2456"><i class="fas fa-circle"></i></div>
+            <p class="metric-label" data-i18n="metric.blue">Biru</p>
+            <p id="stat-biru" class="metric-value mt-1 t-main">0</p>
+          </div>
+          <div class="card card-hover p-4 sm:p-5">
+            <div class="metric-icon" style="background:#fee2e2;color:#b91c1c"><i class="fas fa-circle"></i></div>
+            <p class="metric-label" data-i18n="metric.red">Merah</p>
+            <p id="stat-merah" class="metric-value mt-1 t-main">0</p>
+          </div>
+          <div class="card card-hover p-4 sm:p-5 col-span-2 md:col-span-1" style="border-color:#fecaca">
+            <div class="metric-icon" style="background:#fef2f2;color:#dc2626"><i class="fas fa-triangle-exclamation"></i></div>
+            <p class="metric-label" data-i18n="metric.error">Error</p>
+            <p id="stat-error" class="metric-value mt-1" style="color:#dc2626">0</p>
+          </div>
+        </div>
+
+        <!-- EXPORT STRIP (guest: unduh saja, tidak mengubah Firebase) -->
+        <div class="card p-4 mb-5 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+          <div class="flex items-center gap-2">
+            <i class="fas fa-file-export" style="color:var(--brand)"></i>
+            <p class="text-[12px] font-bold t-main" data-i18n="exp.strip">Unduh laporan dari data realtime ini</p>
+          </div>
+          <button onclick="window.openExportModal()" class="btn-primary w-full sm:w-auto px-4 py-3 sm:py-2.5 text-[12px] sm:text-[11px] font-bold flex items-center justify-center gap-2 min-h-[44px]">
+            <i class="fas fa-file-export"></i><span data-i18n="btn.export">Export Laporan</span>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-5 mb-5">
+          <div class="card p-4 sm:p-5 xl:col-span-2">
+            <h3 class="card-title mb-4"><i class="fas fa-chart-column"></i><span data-i18n="chart.title">Distribusi Penyortiran</span></h3>
+            <div class="h-[210px] sm:h-[240px]"><canvas id="sortingChart"></canvas></div>
+          </div>
+          <div class="card p-4 sm:p-5 flex flex-col justify-center">
+            <div class="rounded-xl p-3 text-[11px] leading-relaxed" style="background:var(--surface-soft)">
+              <i class="fas fa-lock mr-1" style="color:var(--brand)"></i>
+              <span data-i18n="guest.readonly">Guest hanya membaca. Tidak ada tombol ubah, hapus, atau kirim di halaman ini.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card p-4 sm:p-5">
+          <h3 class="card-title mb-3"><i class="fas fa-clock-rotate-left"></i><span data-i18n="log.title">Riwayat Langsung</span></h3>
+          <div class="space-y-2 max-h-[320px] overflow-y-auto pr-1" id="log-panel">
+            <p class="text-[11px] t-muted italic" data-i18n="log.empty">Menunggu data dari Firebase...</p>
+          </div>
+        </div>
+
+        <div id="guest-dev" class="card p-4 sm:p-5 mt-4 sm:mt-5">
+          <h3 class="card-title mb-1"><i class="fas fa-users"></i><span data-i18n="guest.devTitle">Developer R-LAB</span></h3>
+          <p class="text-[11px] t-muted mb-3" data-i18n="guest.devSub">Tim di balik mesin penyortir pintar ini.</p>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="rounded-xl p-4 border text-center" style="background:var(--surface-soft);border-color:var(--border)">
+              <div class="w-11 h-11 rounded-xl mx-auto mb-2 flex items-center justify-center text-white font-extrabold" style="background:#b45309">HA</div>
+              <p class="font-bold text-sm t-main">Hamzah Aufa Ibrahim</p>
+              <p class="text-[10px] t-muted mt-0.5">Mekanik</p>
+            </div>
+            <div class="rounded-xl p-4 border text-center" style="background:var(--surface-soft);border-color:var(--border)">
+              <div class="w-11 h-11 rounded-xl mx-auto mb-2 flex items-center justify-center text-white font-extrabold" style="background:#1a2456">MA</div>
+              <p class="font-bold text-sm t-main">Muhammad Alif Al Hafidz</p>
+              <p class="text-[10px] t-muted mt-0.5">Programmer Website dan AI</p>
+            </div>
+            <div class="rounded-xl p-4 border text-center" style="background:var(--surface-soft);border-color:var(--border)">
+              <div class="w-11 h-11 rounded-xl mx-auto mb-2 flex items-center justify-center text-white font-extrabold" style="background:#97742a">NA</div>
+              <p class="font-bold text-sm t-main">Naufal Ahmad Bilal</p>
+              <p class="text-[10px] t-muted mt-0.5">Programmer Otak Robot dan Elektronika</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<!-- DRAWER (HP) -->
+<div id="drawer-backdrop" onclick="window.toggleDrawer(false)"></div>
+<aside id="mobile-drawer" aria-hidden="true" aria-label="Menu guest">
+  <div class="flex items-center gap-3">
+    <img src="logo.png" alt="Logo R-LAB" class="w-10 h-10 rounded-xl shrink-0" style="object-fit:cover;border:1px solid var(--border)">
+    <div class="leading-tight flex-1">
+      <p class="font-display font-extrabold text-[15px]">R-LAB</p>
+      <p class="text-[10px] font-semibold t-muted">Mode Guest</p>
+    </div>
+    <button class="icon-btn" aria-label="Tutup menu" onclick="window.toggleDrawer(false)"><i class="fas fa-xmark text-xs"></i></button>
+  </div>
+  <div class="flex items-center gap-2 px-3 py-2.5 rounded-xl border" style="background:var(--surface-soft);border-color:var(--border)">
+    <span class="live-dot"></span>
+    <span class="text-[10px] font-bold uppercase" style="color:var(--brand)">Live • ±0.5 dtk</span>
+    <span id="live-clock-drawer" class="font-mono text-[11px] font-bold ml-auto">00:00:00</span>
+  </div>
+  <nav class="flex flex-col gap-1.5">
+    <button class="mnav-btn active" onclick="window.toggleDrawer(false);document.querySelector('.scroll-area').scrollTo({top:0,behavior:'smooth'})">
+      <i class="fas fa-chart-line"></i><span data-i18n="nav.dash">Dasbor Pabrik</span>
+    </button>
+    <button class="mnav-btn" onclick="window.toggleDrawer(false);document.getElementById('guest-dev').scrollIntoView({behavior:'smooth',block:'center'})">
+      <i class="fas fa-users"></i><span data-i18n="guest.dev">Developer</span>
+    </button>
+  </nav>
+  <div class="mt-auto rounded-xl p-4 border text-[11px] t-muted leading-relaxed" style="background:var(--surface-soft);border-color:var(--border)">
+    <span data-i18n="guest.note">Mode guest tidak bisa mengubah data. Semua angka mengikuti Firebase admin otomatis.</span>
+  </div>
+</aside>
+
+<!-- ===================== MODAL: EXPORT (GUEST) ===================== -->
+<div id="export-modal" class="modal">
+  <div class="modal-backdrop" onclick="window.closeModal('export-modal')"></div>
+  <div class="modal-panel">
+    <div class="guest-export-banner mb-4">
+      <i class="fas fa-eye mr-2"></i><span data-i18n="exp.guestTitle">EXPORT IN GUEST</span>
+    </div>
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-extrabold text-base flex items-center gap-2"><i class="fas fa-file-export" style="color:var(--brand)"></i><span data-i18n="exp.title">Export Report</span></h3>
+      <button onclick="window.closeModal('export-modal')" class="icon-btn"><i class="fas fa-xmark text-xs"></i></button>
+    </div>
+
+    <div class="grid grid-cols-3 sm:grid-cols-5 gap-2.5 mb-5 p-3 rounded-2xl border" style="background:var(--surface-soft);border-color:var(--border)">
+      <div class="text-center">
+        <p class="metric-label" data-i18n="metric.total">Total</p>
+        <p id="exp-total" class="text-lg font-extrabold" style="color:var(--brand)">0</p>
+      </div>
+      <div class="text-center">
+        <p class="metric-label" data-i18n="metric.yellow">Kuning</p>
+        <p id="exp-kuning" class="text-lg font-extrabold" style="color:#b45309">0</p>
+      </div>
+      <div class="text-center">
+        <p class="metric-label" data-i18n="metric.blue">Biru</p>
+        <p id="exp-biru" class="text-lg font-extrabold" style="color:#2b4b9b">0</p>
+      </div>
+      <div class="text-center">
+        <p class="metric-label" data-i18n="metric.red">Merah</p>
+        <p id="exp-merah" class="text-lg font-extrabold" style="color:#b91c1c">0</p>
+      </div>
+      <div class="text-center col-span-3 sm:col-span-1 rounded-xl py-1" style="background:#fef2f2;border:1px solid #fecaca">
+        <p class="metric-label" data-i18n="metric.error">Error</p>
+        <p id="exp-gagal" class="text-lg font-extrabold" style="color:#dc2626">0</p>
+      </div>
+    </div>
+
+    <p class="text-[10px] font-bold uppercase t-muted mb-3" data-i18n="exp.choose">Choose a format</p>
+
+    <div class="grid grid-cols-3 gap-2 sm:gap-3">
+      <button class="export-tile" onclick="window.doExport('xlsx')">
+        <i class="fas fa-file-excel" style="color:#16a34a"></i><span>Excel</span><small>.XLSX · COLORED</small>
+      </button>
+      <button class="export-tile" onclick="window.doExport('pdf')">
+        <i class="fas fa-file-pdf" style="color:#dc2626"></i><span>PDF</span><small>.PDF · PRINT READY</small>
+      </button>
+      <button class="export-tile" onclick="window.doExport('csv')">
+        <i class="fas fa-file-csv" style="color:#0891b2"></i><span>CSV</span><small>.CSV · RAW DATA</small>
+      </button>
+    </div>
+
+    <p class="text-[10px] t-muted mt-4 text-center leading-relaxed" data-i18n="exp.note">
+      Laporan guest: header EXPORT IN GUEST, ringkasan sortir + error, timestamp penuh, baris berwarna.
+    </p>
+  </div>
+</div>
+
+<button id="jarvis-fab" aria-label="Buka Jarvis AI" onclick="window.jarvisToggle()"><i class="fas fa-robot"></i></button>
+<div id="jarvis-panel" role="dialog" aria-label="Jarvis AI R-LAB">
+  <div class="jarvis-head">
+    <img src="logo.png" alt="R-LAB">
+    <div class="t"><b>R-AI</b><small id="jarvis-sub">Guest · tanya info saja</small></div>
+    <button class="icon-btn" id="jarvis-voice-btn" title="Suara on/off" onclick="window.jarvisSpeakerToggle()" style="width:32px;height:32px;"><i class="fas fa-volume-up text-xs"></i></button>
+    <button class="icon-btn" title="Tutup" onclick="window.jarvisToggle(false)" style="width:32px;height:32px;"><i class="fas fa-xmark text-xs"></i></button>
+  </div>
+  <div class="jarvis-msgs" id="jarvis-msgs"></div>
+  <div class="jarvis-chips" id="jarvis-chips"></div>
+  <div class="jarvis-input">
+    <button class="icon-btn" id="jarvis-mic" title="Bicara" onclick="window.jarvisListen()"><i class="fas fa-microphone text-xs"></i></button>
+    <input type="text" id="jarvis-text" class="inp" placeholder="Tanya R-AI..." autocomplete="off" onkeydown="if(event.key==='Enter')window.jarvisSend()">
+    <button class="btn-primary px-3" title="Kirim" onclick="window.jarvisSend()"><i class="fas fa-paper-plane text-xs"></i></button>
+  </div>
+</div>
+
+<div id="toast"><div class="toast-inner"><i class="fas fa-circle-info" style="color:#60a5fa"></i><span id="toast-msg">Menghubungkan...</span></div></div>
+
+<script src="rai-knowledge.js"></script>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getDatabase, ref, onValue } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+
+/* Firebase guest — selalu tersambung, read-only (tanpa update/set) */
+const FB_CONFIG = {
+  apiKey: "AIzaSyAVwURHeateFtCSNuzLH69Gt3nkjXdEXzM",
+  databaseURL: "https://smart-factory-ai-7b576-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "smart-factory-ai-7b576"
+};
+const FB_PATH = "smart_factory/sorting_line";
+const SYNC_DELAY_MS = 500; // selisih ±0.5 detik mengikuti admin
+
+const state = { lang: 'id', chart: null, chartYMax: 5, sortingData: { kuning: 0, biru: 0, merah: 0, gagal: 0, total: 0 }, exportLogs: [], _delayT: null, _retries: 0 };
+const $ = (id) => document.getElementById(id);
+
+const I18N = {
+  id: {
+    'brand.tag': 'Smart Sorting System', 'guest.badge': 'Mode Guest — Lihat Saja', 'guest.conn': 'Status Koneksi', 'guest.dev': 'Developer', 'guest.devTitle': 'Developer R-LAB', 'guest.devSub': 'Tim di balik mesin penyortir pintar ini.',
+    'guest.note': 'Mode guest tidak bisa mengubah data. Semua angka mengikuti Firebase admin otomatis.',
+    'guest.readonly': 'Guest hanya membaca. Tidak ada tombol ubah, hapus, atau kirim di halaman ini.',
+    'guest.connTitle': 'Koneksi Firebase', 'guest.sync': 'Sinkron ±0.5 detik mengikuti mode admin.',
+    'nav.dash': 'Dasbor Pabrik', 'dash.live': 'Live Production — Guest', 'dash.title': 'Dasbor Pabrik Pintar',
+    'dash.sub': 'Data sorting realtime dari Firebase.',
+    'metric.total': 'Total Diproses', 'metric.yellow': 'Kuning', 'metric.blue': 'Biru', 'metric.red': 'Merah', 'metric.error': 'Error',
+    'chart.title': 'Distribusi Penyortiran', 'log.title': 'Riwayat Langsung', 'log.empty': 'Menunggu data dari Firebase...',
+    'btn.export': 'Export Laporan', 'exp.strip': 'Unduh laporan dari data realtime ini',
+    'exp.guestTitle': 'EXPORT IN GUEST', 'exp.title': 'Export Report', 'exp.choose': 'Pilih format',
+    'exp.note': 'Laporan guest: header EXPORT IN GUEST, ringkasan sortir + error, timestamp penuh, baris berwarna.'
+  },
+  en: {
+    'brand.tag': 'Smart Sorting System', 'guest.badge': 'Guest Mode — View Only', 'guest.conn': 'Connection Status', 'guest.dev': 'Developer', 'guest.devTitle': 'R-LAB Developers', 'guest.devSub': 'The team behind this smart sorting machine.',
+    'guest.note': 'Guest mode cannot change data. All numbers follow the admin Firebase automatically.',
+    'guest.readonly': 'Guest is read-only. No edit, delete, or send buttons on this page.',
+    'guest.connTitle': 'Firebase Connection', 'guest.sync': 'Syncs ±0.5s following admin mode.',
+    'nav.dash': 'Factory Dashboard', 'dash.live': 'Live Production — Guest', 'dash.title': 'Smart Factory Dashboard',
+    'dash.sub': 'Realtime sorting data from Firebase.',
+    'metric.total': 'Total Processed', 'metric.yellow': 'Yellow', 'metric.blue': 'Blue', 'metric.red': 'Red', 'metric.error': 'Error',
+    'chart.title': 'Sorting Distribution', 'log.title': 'Live History', 'log.empty': 'Waiting for Firebase data...',
+    'btn.export': 'Export Report', 'exp.strip': 'Download a report from this realtime data',
+    'exp.guestTitle': 'EXPORT IN GUEST', 'exp.title': 'Export Report', 'exp.choose': 'Choose a format',
+    'exp.note': 'Guest report: EXPORT IN GUEST header, sort + error summary, full timestamps, colored rows.'
+  }
+};
+
+function showToast(msg) {
+  const el = $('toast');
+  $('toast-msg').innerText = msg;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+window.goHome = () => {
+  try { sessionStorage.removeItem('rlab_admin_auth'); } catch (e) { }
+  window.location.href = 'index.html';
+};
+window.toggleDrawer = (open) => {
+  const drawer = $('mobile-drawer'), backdrop = $('drawer-backdrop'), btn = $('btn-menu');
+  if (!drawer || !backdrop) return;
+  const willOpen = typeof open === 'boolean' ? open : !drawer.classList.contains('open');
+  drawer.classList.toggle('open', willOpen);
+  backdrop.classList.toggle('show', willOpen);
+  drawer.setAttribute('aria-hidden', willOpen ? 'false' : 'true');
+  if (btn) btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+};
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') window.toggleDrawer(false); });
+
+window.toggleTheme = () => {
+  const dark = !document.documentElement.classList.contains('dark');
+  document.documentElement.classList.toggle('dark', dark);
+  try { localStorage.setItem('rlab_guest_theme', dark ? 'dark' : 'light'); } catch (e) { }
+};
+window.toggleLang = () => {
+  state.lang = state.lang === 'id' ? 'en' : 'id';
+  try { localStorage.setItem('rlab_guest_lang', state.lang); } catch (e) { }
+  applyLang();
+};
+function applyLang() {
+  document.documentElement.lang = state.lang;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const v = I18N[state.lang][el.dataset.i18n];
+    if (v !== undefined) el.innerHTML = v;
+  });
+  $('lang-btn').innerText = state.lang.toUpperCase();
+  if (state.chart) { state.chart.data.labels = chartLabels(); state.chart.update('none'); }
+}
+
+setInterval(() => {
+  const time = new Date().toLocaleTimeString('id-ID');
+  const a = $('live-clock'); if (a) a.innerText = time;
+  const c = $('live-clock-drawer'); if (c) c.innerText = time;
+}, 1000);
+
+function setPill(el, cls, text) {
+  if (!el) return;
+  el.className = 'pill' + (cls ? ' ' + cls : '');
+  el.innerText = text;
+}
+function fullTimestamp(d = new Date()) {
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+function popMetric(id) {
+  const el = $(id);
+  if (!el) return;
+  el.classList.remove('pop');
+  void el.offsetWidth;
+  el.classList.add('pop');
+}
+function updateUIStats() {
+  $('stat-total').innerText = state.sortingData.total;
+  $('stat-kuning').innerText = state.sortingData.kuning;
+  $('stat-biru').innerText = state.sortingData.biru;
+  $('stat-merah').innerText = state.sortingData.merah;
+  const se = $('stat-error'); if (se) se.innerText = state.sortingData.gagal;
+  ['stat-total', 'stat-kuning', 'stat-biru', 'stat-merah', 'stat-error'].forEach(popMetric);
+  $('last-sync').innerText = fullTimestamp(new Date());
+}
+
+function chartLabels() {
+  return state.lang === 'id' ? ['Kuning', 'Biru', 'Merah', 'Error'] : ['Yellow', 'Blue', 'Red', 'Error'];
+}
+function computeYMax(values) {
+  const m = Math.max(...values, 1);
+  if (m <= 5) return 5;
+  if (m <= 10) return 10;
+  if (m <= 20) return 20;
+  if (m <= 50) return 50;
+  if (m <= 100) return 100;
+  if (m <= 200) return 200;
+  if (m <= 500) return 500;
+  return Math.ceil(m / 500) * 500;
+}
+function initChart() {
+  if (typeof Chart === 'undefined' || !$('sortingChart')) return;
+  if (state.chart) { try { state.chart.destroy(); } catch (e) { } state.chart = null; }
+  state.chartYMax = 5;
+  state.chart = new Chart($('sortingChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: chartLabels(),
+      datasets: [{
+        data: [0, 0, 0, 0],
+        backgroundColor: ['#c69a45', '#2b4b9b', '#b91c1c', '#94a3b8'],
+        borderRadius: 10, borderSkipped: false, maxBarThickness: 64, minBarLength: 2
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 600, easing: 'easeOutQuart' },
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { weight: '700', size: 11 } } },
+        y: { beginAtZero: true, max: 5, grid: { color: 'rgba(148,163,184,.16)' }, ticks: { color: '#94a3b8', precision: 0, font: { size: 11 }, callback: (v) => Number.isInteger(v) ? v : null } }
+      }
+    }
+  });
+}
+function updateChart() {
+  if (!state.chart) return;
+  const d = [state.sortingData.kuning, state.sortingData.biru, state.sortingData.merah, state.sortingData.gagal];
+  const needed = computeYMax(d);
+  if (needed > state.chartYMax) { state.chartYMax = needed; state.chart.options.scales.y.max = needed; }
+  const ds = state.chart.data.datasets[0].data;
+  ds[0] = d[0]; ds[1] = d[1]; ds[2] = d[2]; ds[3] = d[3];
+  state.chart.data.labels = chartLabels();
+  try { state.chart.update(); } catch (e) { }
+}
+
+const COLOR_STYLE = {
+  kuning: 'background:#fef3c7;color:#b45309',
+  biru: 'background:#dbeafe;color:#1d4ed8',
+  merah: 'background:#fee2e2;color:#b91c1c',
+  gagal: 'background:#fef2f2;color:#dc2626'
+};
+function collectEntries(obj) {
+  if (!obj) return [];
+  const arr = Array.isArray(obj) ? obj : Object.values(obj);
+  return arr.filter(x => x !== null && typeof x === 'object');
+}
+function renderFromData(data) {
+  data = data || {};
+  const count = (obj) => collectEntries(obj).length;
+  state.sortingData = {
+    kuning: count(data.kuning), biru: count(data.biru), merah: count(data.merah),
+    gagal: count(data.gagal),
+    total: count(data.kuning) + count(data.biru) + count(data.merah)
+  };
+  updateUIStats();
+  updateChart();
+
+  const events = [];
+  const properName = { kuning: 'Kuning', biru: 'Biru', merah: 'Merah' };
+  [['kuning', 'kuning'], ['biru', 'biru'], ['merah', 'merah'], ['gagal', 'gagal']].forEach(([key, color]) => {
+    collectEntries(data[key]).forEach(e => {
+      events.push({ color, ts: Number(e.timestamp) || 0, mode: e.mode || '-' });
+    });
+  });
+  events.sort((a, b) => b.ts - a.ts);
+
+  /* Log export guest: urut waktu menaik, timestamp penuh, aman untuk Excel/CSV/PDF/DOCX */
+  state.exportLogs = events
+    .slice()
+    .sort((a, b) => a.ts - b.ts)
+    .map(ev => ({
+      timestamp: ev.ts ? fullTimestamp(new Date(ev.ts)) : '-',
+      warna: ev.color === 'gagal' ? 'Unknown' : properName[ev.color],
+      mode: ev.mode,
+      status: ev.color === 'gagal' ? 'Error' : 'Berhasil',
+      nilai: ev.color === 'gagal' ? 0 : 1
+    }));
+
+  const panel = $('log-panel');
+  if (!events.length) {
+    panel.innerHTML = `<p class="text-[11px] t-muted italic">${I18N[state.lang]['log.empty']}</p>`;
+    return;
+  }
+  const names = { kuning: 'Kuning', biru: 'Biru', merah: 'Merah', gagal: 'Error' };
+  const icons = { kuning: 'fas fa-circle', biru: 'fas fa-circle', merah: 'fas fa-circle', gagal: 'fas fa-triangle-exclamation' };
+  panel.innerHTML = events.slice(0, 18).map(ev => `
+    <div class="log-item">
+      <div class="log-ico" style="${COLOR_STYLE[ev.color]}"><i class="${icons[ev.color]}"></i></div>
+      <div class="overflow-hidden">
+        <p class="text-[10px] font-bold t-main truncate">${names[ev.color]}${ev.color === 'gagal' ? '' : ' Tersortir'}</p>
+        <p class="text-[9px] t-muted truncate">${ev.ts ? fullTimestamp(new Date(ev.ts)) : '-'} · ${ev.mode}</p>
+      </div>
+    </div>`).join('');
+}
+
+window.connectFB = () => {
+  setPill($('status-fb'), '', 'FB: MENGHUBUNGKAN...');
+  $('btn-retry').classList.add('hidden');
+  try {
+    const app = initializeApp(FB_CONFIG);
+    const db = getDatabase(app);
+    onValue(ref(db, FB_PATH),
+      (snap) => {
+        state._retries = 0;
+        setPill($('status-fb'), 'on', 'FB: SYNCED');
+        setPill($('status-delay'), 'blue', '±0.5 dtk • LIVE');
+        /* Tunda render 0.5 detik → guest mengikuti admin dengan selisih tetap */
+        clearTimeout(state._delayT);
+        const val = snap.val();
+        state._delayT = setTimeout(() => renderFromData(val), SYNC_DELAY_MS);
+      },
+      (err) => {
+        console.error(err);
+        setPill($('status-fb'), 'warn', 'FB: ERROR');
+        $('btn-retry').classList.remove('hidden');
+        showToast('Firebase guest gagal: ' + (err && err.message ? err.message : err));
+      }
+    );
+    showToast(state.lang === 'id' ? 'Guest tersambung • update 0.5 dtk' : 'Guest connected • 0.5s updates');
+  } catch (e) {
+    console.error(e);
+    setPill($('status-fb'), 'warn', 'FB: ERROR');
+    $('btn-retry').classList.remove('hidden');
+    if (state._retries < 5) { state._retries++; setTimeout(window.connectFB, 2000); }
+  }
+};
+
+/* ================================================================== */
+/*  EXPORT GUEST — baca saja, header EXPORT IN GUEST menonjol         */
+/* ================================================================== */
+function getSummary() {
+  const d = state.sortingData;
+  const attempts = d.total + d.gagal;
+  const rate = attempts > 0 ? ((d.total / attempts) * 100).toFixed(1) : '0.0';
+  return { total: d.total, kuning: d.kuning, biru: d.biru, merah: d.merah, gagal: d.gagal, rate };
+}
+function refreshExportSummary() {
+  const s = getSummary();
+  $('exp-total').innerText = s.total;
+  $('exp-kuning').innerText = s.kuning;
+  $('exp-biru').innerText = s.biru;
+  $('exp-merah').innerText = s.merah;
+  const eg = $('exp-gagal'); if (eg) eg.innerText = s.gagal;
+}
+window.openExportModal = () => { refreshExportSummary(); window.openModal('export-modal'); };
+window.openModal = (id) => { const m = $(id); if (m) m.classList.add('open'); };
+window.closeModal = (id) => { const m = $(id); if (m) m.classList.remove('open'); };
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open'));
+});
+
+const COLOR_MAP = {
+  'Kuning': { fill: 'FEF3C7', text: '92400E', rgb: [254, 243, 199] },
+  'Biru': { fill: 'DBEAFE', text: '1E40AF', rgb: [219, 234, 254] },
+  'Merah': { fill: 'FEE2E2', text: '991B1B', rgb: [254, 226, 226] },
+  'Unknown': { fill: 'F1F5F9', text: '475569', rgb: [241, 245, 249] }
+};
+const colorMeta = (name) => COLOR_MAP[name] || COLOR_MAP['Unknown'];
+function localColor(name) {
+  if (state.lang === 'en') {
+    return name === 'Kuning' ? 'Yellow' : name === 'Biru' ? 'Blue' : name === 'Merah' ? 'Red' : name;
+  }
+  return name;
+}
+function timestampTag() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+}
+function safeCell(v) {
+  const s = String(v ?? '');
+  return /^[=+\-@]/.test(s) ? `'${s}` : s;
+}
+function csvEsc(v) {
+  const s = String(v ?? '');
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+function escHtml(v) {
+  return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+function hexToRgb(hex) {
+  const n = parseInt(hex, 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function hasExportData() {
+  return state.exportLogs.length > 0 || (state.sortingData.total + state.sortingData.gagal) > 0;
+}
+function noDataToast() {
+  showToast(state.lang === 'id' ? 'Belum ada data untuk diexport!' : 'No data to export yet!');
+}
+
+function exportCSV() {
+  if (!hasExportData()) return noDataToast();
+  const s = getSummary();
+  const attempts = s.total + s.gagal;
+  const errRate = attempts > 0 ? ((s.gagal / attempts) * 100).toFixed(1) + '%' : '0.0%';
+  let csv = "EXPORT IN GUEST — R-LAB SMART SORTING FACTORY REPORT\n";
+  csv += "GUEST MODE — read-only guest export (anti-fraud watermark)\n";
+  csv += `Generated,${csvEsc(fullTimestamp(new Date()))}\n`;
+  csv += `Total Processed,${s.total},Yellow,${s.kuning},Blue,${s.biru}\n`;
+  csv += `Red,${s.merah},Error,${s.gagal},Total Attempts,${attempts}\n`;
+  csv += `Success Rate,${s.rate}%,Error Rate,${errRate}\n\n`;
+  csv += "No,Timestamp (YYYY-MM-DD HH:MM:SS),Color,Mode,Status,Value\n";
+  state.exportLogs.forEach((row, i) => {
+    csv += `${i + 1},${csvEsc(safeCell(row.timestamp))},${csvEsc(safeCell(localColor(row.warna)))},${csvEsc(safeCell(row.mode))},${csvEsc(safeCell(row.status))},${row.nilai}\n`;
+  });
+  downloadBlob(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }), `R-LAB_GUEST_Report_${timestampTag()}.csv`);
+  showToast('CSV guest berhasil diunduh!');
+}
+
+function exportXLSX() {
+  if (typeof XLSX === 'undefined') return showToast('Library Excel belum termuat.');
+  if (!hasExportData()) return noDataToast();
+  const s = getSummary();
+  const rows = state.exportLogs;
+  const attempts = s.total + s.gagal;
+  const aoa = [];
+  aoa.push(['EXPORT IN GUEST']);
+  aoa.push(['R-LAB — SMART SORTING FACTORY REPORT (GUEST)']);
+  aoa.push(['Generated', fullTimestamp(new Date()), '', 'Total Processed', s.total]);
+  aoa.push(['Success Rate', s.rate + '%', '', 'Error', s.gagal]);
+  aoa.push([]);
+  aoa.push(['SORTING SUMMARY']);
+  aoa.push(['Yellow', s.kuning, 'Blue', s.biru, 'Red', s.merah]);
+  aoa.push(['Error', s.gagal, 'Total Attempts', attempts, 'Success Rate', s.rate + '%']);
+  aoa.push([]);
+  aoa.push(['No', 'Timestamp (YYYY-MM-DD HH:MM:SS)', 'Color', 'Mode', 'Status', 'Value']);
+  const HEADER_ROW = aoa.length - 1;
+  const ERROR_ROW = HEADER_ROW - 2;
+  rows.forEach((r, i) => aoa.push([i + 1, safeCell(r.timestamp), safeCell(localColor(r.warna)), safeCell(r.mode), safeCell(r.status), r.nilai]));
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!merges'] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: 5 } },
+    { s: { r: 5, c: 0 }, e: { r: 5, c: 5 } }
+  ];
+  ws['!cols'] = [{ wch: 6 }, { wch: 22 }, { wch: 14 }, { wch: 12 }, { wch: 20 }, { wch: 9 }];
+  ws['!rows'] = [{ hpt: 34 }, { hpt: 28 }, {}, {}, {}, { hpt: 20 }, {}, {}, {}, { hpt: 22 }];
+  const thin = { style: 'thin', color: { rgb: 'CBD5E1' } };
+  const border = { top: thin, bottom: thin, left: thin, right: thin };
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for (let R = range.s.r; R <= range.e.r; ++R) {
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      const addr = XLSX.utils.encode_cell({ r: R, c: C });
+      const cell = ws[addr];
+      if (!cell) continue;
+      let style = { font: { sz: 11, color: { rgb: '1E293B' } }, alignment: { vertical: 'center' } };
+      if (R === 0) {
+        style = { font: { sz: 18, bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '991B1B' } }, alignment: { horizontal: 'center', vertical: 'center' } };
+      } else if (R === 1) {
+        style = { font: { sz: 14, bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1A2456' } }, alignment: { horizontal: 'center', vertical: 'center' } };
+      } else if (R === 5) {
+        style = { font: { sz: 12, bold: true, color: { rgb: '1A2456' } }, fill: { fgColor: { rgb: 'E0E7FF' } }, alignment: { horizontal: 'left', vertical: 'center' } };
+      } else if (R === 6 || R === ERROR_ROW) {
+        const isErr = (R === ERROR_ROW);
+        style = { font: { sz: 11, bold: true, color: { rgb: isErr && (C === 0 || C === 1) ? '991B1B' : '0F172A' } }, fill: { fgColor: { rgb: isErr ? 'FEE2E2' : 'F1F5F9' } }, alignment: { horizontal: 'center' }, border };
+      } else if (R === HEADER_ROW) {
+        style = { font: { sz: 11, bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '0F172A' } }, alignment: { horizontal: 'center', vertical: 'center' }, border };
+      } else if (R > HEADER_ROW) {
+        const rowData = rows[R - HEADER_ROW - 1];
+        const meta = colorMeta(rowData ? rowData.warna : 'Unknown');
+        style = { font: { sz: 11, color: { rgb: meta.text } }, fill: { fgColor: { rgb: meta.fill } }, alignment: { horizontal: C === 0 || C === 5 ? 'center' : 'left', vertical: 'center', wrapText: C === 1 }, border };
+      }
+      cell.s = style;
+      if (R > HEADER_ROW && C === 1) { try { cell.z = '@'; cell.t = 's'; } catch (e) { } }
+    }
+  }
+  try {
+    ws['!freeze'] = { xSplit: 0, ySplit: HEADER_ROW + 1, topLeftCell: 'A' + (HEADER_ROW + 2), state: 'frozen' };
+    ws['!autofilter'] = { ref: `A${HEADER_ROW + 1}:F${HEADER_ROW + 1}` };
+  } catch (e) { }
+  try {
+    wb.Props = {
+      Title: 'R-LAB Guest Report — GUEST MODE',
+      Subject: 'GUEST MODE — read-only guest export (anti-fraud watermark)',
+      Author: 'R-LAB Guest',
+      CreatedDate: new Date()
+    };
+  } catch (e) { }
+  XLSX.utils.book_append_sheet(wb, ws, 'Guest Report');
+  XLSX.writeFile(wb, `R-LAB_GUEST_Report_${timestampTag()}.xlsx`);
+  showToast('Excel guest berhasil diunduh!');
+}
+
+/* PDF guest vektor — satu watermark logo besar di tengah belakang (anti-fraud) */
+function exportPDF() {
+  if (!window.jspdf) return showToast('Library PDF belum termuat.');
+  if (!hasExportData()) return noDataToast();
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+  const W = doc.internal.pageSize.getWidth();
+  const s = getSummary();
+  /* Lambang R tengah ala dokumen negara di DEPAN isi tapi sangat samar */
+  function drawWatermark() {
+    try {
+      const Wm = doc.internal.pageSize.getWidth(), Hm = doc.internal.pageSize.getHeight();
+      const cx = Wm / 2, cy = Hm / 2;
+      doc.saveGraphicsState();
+      doc.setDrawColor(198, 154, 69);
+      doc.setLineWidth(2.5);
+      doc.circle(cx, cy, 185, 'D');
+      doc.setLineWidth(1);
+      doc.circle(cx, cy, 163, 'D');
+      doc.setTextColor(198, 154, 69);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(150);
+      doc.text('R', cx, cy + 52, { align: 'center' });
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(25);
+      doc.text('GUEST MODE', cx, cy + 118, { align: 'center' });
+      doc.restoreGraphicsState();
+    } catch (e) { }
+  }
+  doc.setFillColor(153, 27, 27);
+  doc.rect(0, 0, W, 104, 'F');
+  doc.setFillColor(198, 154, 69);
+  doc.rect(0, 100, W, 4, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(26);
+  doc.text('EXPORT IN GUEST', 40, 40);
+  doc.setFontSize(13);
+  doc.text('R-LAB — Smart Sorting Factory Report', 40, 62);
+  doc.setFontSize(9);
+  doc.text('Generated: ' + fullTimestamp(new Date()), 40, 80);
+
+  const attempts = s.total + s.gagal;
+  const errRate = attempts > 0 ? ((s.gagal / attempts) * 100).toFixed(1) + '%' : '0.0%';
+  const sectionTitle = (txt, y) => {
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(26, 36, 86);
+    doc.text(txt, 40, y);
+  };
+  sectionTitle('1. SORTING SUMMARY', 128);
+  doc.autoTable({
+    startY: 134,
+    head: [['Total Processed', 'Yellow', 'Blue', 'Red', 'Error', 'Success Rate']],
+    body: [[s.total, s.kuning, s.biru, s.merah, s.gagal, s.rate + '%']],
+    theme: 'grid',
+    headStyles: { fillColor: [15, 23, 42], textColor: 255, fontSize: 9, halign: 'center', fontStyle: 'bold' },
+    bodyStyles: { fontSize: 11, halign: 'center', fontStyle: 'bold', textColor: [30, 41, 59] },
+    margin: { left: 40, right: 40 },
+    didDrawPage: () => { drawWatermark(); }
+  });
+  sectionTitle('2. ERROR SUMMARY', (doc.lastAutoTable ? doc.lastAutoTable.finalY : 160) + 24);
+  doc.autoTable({
+    startY: (doc.lastAutoTable ? doc.lastAutoTable.finalY : 160) + 30,
+    head: [['Error', 'Error Rate', 'Total Attempts']],
+    body: [[s.gagal + 'x error', errRate, attempts]],
+    theme: 'grid',
+    headStyles: { fillColor: [153, 27, 27], textColor: 255, fontSize: 9, halign: 'center', fontStyle: 'bold' },
+    bodyStyles: { fontSize: 11, halign: 'center', fontStyle: 'bold', textColor: [153, 27, 27], fillColor: [254, 226, 226] },
+    margin: { left: 40, right: 40 },
+    didDrawPage: () => { drawWatermark(); }
+  });
+  const body = state.exportLogs.map((r, i) => {
+    const meta = colorMeta(r.warna);
+    const tc = hexToRgb(meta.text);
+    return [
+      { content: i + 1, styles: { fillColor: meta.rgb, textColor: tc } },
+      { content: safeCell(r.timestamp), styles: { fillColor: meta.rgb, textColor: tc } },
+      { content: safeCell(localColor(r.warna)), styles: { fillColor: meta.rgb, textColor: tc } },
+      { content: safeCell(r.mode), styles: { fillColor: meta.rgb, textColor: tc } },
+      { content: safeCell(r.status), styles: { fillColor: meta.rgb, textColor: tc } },
+      { content: r.nilai, styles: { fillColor: meta.rgb, textColor: tc } }
+    ];
+  });
+  sectionTitle('3. DETAILED SORTING LOG', (doc.lastAutoTable ? doc.lastAutoTable.finalY : 160) + 24);
+  doc.autoTable({
+    startY: (doc.lastAutoTable ? doc.lastAutoTable.finalY : 160) + 30,
+    head: [['No', 'Timestamp (YYYY-MM-DD HH:MM:SS)', 'Color', 'Mode', 'Status', 'Value']],
+    body: body.length ? body : [[{ content: 'No data recorded', colSpan: 6, styles: { halign: 'center', textColor: [120, 130, 150] } }]],
+    theme: 'grid',
+    headStyles: { fillColor: [30, 58, 138], textColor: 255, fontSize: 8, halign: 'center' },
+    bodyStyles: { fontSize: 8, halign: 'center', textColor: [30, 41, 59] },
+    columnStyles: { 0: { cellWidth: 28 }, 1: { cellWidth: 118 }, 2: { cellWidth: 62 }, 3: { cellWidth: 58 }, 4: { cellWidth: 110 }, 5: { cellWidth: 40 } },
+    margin: { left: 40, right: 40 },
+    didDrawPage: () => {
+      drawWatermark();
+      const H = doc.internal.pageSize.getHeight();
+      doc.setFontSize(8); doc.setTextColor(150);
+      doc.text('R-LAB GUEST — Smart Sorting System', 40, H - 20);
+      doc.text('Page ' + doc.internal.getNumberOfPages(), W - 70, H - 20);
+    }
+  });
+  doc.save(`R-LAB_GUEST_Report_${timestampTag()}.pdf`);
+  showToast('PDF guest berhasil diunduh!');
+}
+
+async function exportDOCX() {
+  const D = window.docx;
+  if (!D) return showToast('Library DOCX belum termuat.');
+  if (!hasExportData()) return noDataToast();
+  const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, ShadingType, BorderStyle, Header } = D;
+  const s = getSummary();
+  const rows = state.exportLogs;
+  const attempts = s.total + s.gagal;
+  const errRate = attempts > 0 ? ((s.gagal / attempts) * 100).toFixed(1) + '%' : '0.0%';
+  const para = (text, opts = {}) => new Paragraph({
+    alignment: opts.align || AlignmentType.LEFT,
+    spacing: { after: opts.after !== undefined ? opts.after : 120 },
+    children: [new TextRun({ text: String(text), bold: !!opts.bold, size: opts.size || 20, color: opts.color || '1E293B', italics: !!opts.italics })]
+  });
+  const thinBorder = { style: BorderStyle.SINGLE, size: 4, color: 'CBD5E1' };
+  const cellBorders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
+  const headCell = (text, fill = '1E3A8A') => new TableCell({
+    shading: { type: ShadingType.CLEAR, color: 'auto', fill },
+    margins: { top: 90, bottom: 90, left: 110, right: 110 },
+    borders: cellBorders,
+    children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(text), bold: true, color: 'FFFFFF', size: 18 })] })]
+  });
+  const dataCell = (text, fill, color = '1E293B', align = AlignmentType.CENTER) => new TableCell({
+    shading: fill ? { type: ShadingType.CLEAR, color: 'auto', fill } : undefined,
+    margins: { top: 70, bottom: 70, left: 110, right: 110 },
+    borders: cellBorders,
+    children: [new Paragraph({ alignment: align, children: [new TextRun({ text: String(text), size: 18, color })] })]
+  });
+  const summaryRows = [
+    new TableRow({ children: [headCell('Total Processed'), headCell('Yellow'), headCell('Blue'), headCell('Red'), headCell('Error', '991B1B'), headCell('Success Rate')] }),
+    new TableRow({ children: [dataCell(s.total, 'E0E7FF', '1A2456'), dataCell(s.kuning, 'FEF3C7', '92400E'), dataCell(s.biru, 'DBEAFE', '1E40AF'), dataCell(s.merah, 'FEE2E2', '991B1B'), dataCell(s.gagal, 'FEE2E2', '991B1B'), dataCell(s.rate + '%', 'DCFCE7', '166534')] })
+  ];
+  const errorRows = [
+    new TableRow({ children: [headCell('Error', '991B1B'), headCell('Error Rate', '991B1B'), headCell('Total Attempts', '991B1B')] }),
+    new TableRow({ children: [dataCell(s.gagal + 'x error', 'FEE2E2', '991B1B'), dataCell(errRate, 'FEE2E2', '991B1B'), dataCell(attempts, 'F1F5F9', '475569')] })
+  ];
+  const detailRows = [
+    new TableRow({ tableHeader: true, children: ['No', 'Timestamp (YYYY-MM-DD HH:MM:SS)', 'Color', 'Mode', 'Status', 'Value'].map(t => headCell(t)) })
+  ];
+  if (!rows.length) {
+    detailRows.push(new TableRow({ children: new TableCell({ columnSpan: 6, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'No data recorded', italics: true, color: '94A3B8', size: 18 })] })] }) }));
+  } else {
+    rows.forEach((r, i) => {
+      const meta = colorMeta(r.warna);
+      detailRows.push(new TableRow({ children: [dataCell(i + 1, meta.fill, meta.text), dataCell(safeCell(r.timestamp), meta.fill, meta.text), dataCell(safeCell(localColor(r.warna)), meta.fill, meta.text), dataCell(safeCell(r.mode), meta.fill, meta.text), dataCell(safeCell(r.status), meta.fill, meta.text), dataCell(r.nilai, meta.fill, meta.text)] }));
+    });
+  }
+  const guestHeader = (typeof Header !== 'undefined') ? {
+    default: new Header({
+      children: [new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [new TextRun({ text: 'GUEST MODE • R-LAB Guest Export — read-only', size: 16, color: '8FA9D6', font: 'Arial' })]
+      })]
+    })
+  } : undefined;
+  const doc = new Document({
+    creator: 'R-LAB Guest',
+    title: 'R-LAB Guest Report — EXPORT IN GUEST',
+    background: { color: 'F2F7FF' },
+    sections: [{
+      properties: { page: { margin: { top: 900, bottom: 900, left: 900, right: 900 } } },
+      ...(guestHeader ? { headers: guestHeader } : {}),
+      children: [
+        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, children: [new TextRun({ text: 'EXPORT IN GUEST', bold: true, size: 56, color: '991B1B', font: 'Arial' })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 60 }, children: [new TextRun({ text: 'R-LAB', bold: true, size: 64, color: '1A2456', font: 'Arial' })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 60 }, children: [new TextRun({ text: 'SMART SORTING FACTORY — GUEST PRODUCTION REPORT', bold: true, size: 20, color: '0F172A' })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 320 },           border: { bottom: { style: BorderStyle.SINGLE, size: 12, color: 'C69A45', space: 6 } }, children: [new TextRun({ text: 'Generated: ' + fullTimestamp(new Date()), size: 18, color: '64748B' })] }),
+        para('1. SORTING SUMMARY', { bold: true, size: 26, color: '1A2456', after: 160 }),
+        new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: summaryRows }),
+        para('', { after: 260 }),
+        para('2. ERROR SUMMARY', { bold: true, size: 26, color: '991B1B', after: 160 }),
+        new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: errorRows }),
+        para('', { after: 260 }),
+        para('3. DETAILED SORTING LOG', { bold: true, size: 26, color: '1A2456', after: 160 }),
+        new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: detailRows }),
+        para('', { after: 300 }),
+        new Paragraph({ alignment: AlignmentType.CENTER, border: { top: { style: BorderStyle.SINGLE, size: 6, color: 'CBD5E1', space: 8 } }, children: [new TextRun({ text: 'R-LAB GUEST — Hamzah Aufa Ibrahim · Muhammad Alif Al Hafidz · Naufal Ahmad Bilal', size: 16, color: '94A3B8' })] })
+      ]
+    }]
+  });
+  try {
+    const blob = await Packer.toBlob(doc);
+    downloadBlob(blob, `R-LAB_GUEST_Report_${timestampTag()}.docx`);
+    showToast('Word guest berhasil diunduh!');
+  } catch (e) { console.error(e); showToast('Gagal membuat DOCX.'); }
+}
+
+window.doExport = async (type) => {
+  window.closeModal('export-modal');
+  await new Promise(r => setTimeout(r, 180));
+  try {
+    if (type === 'xlsx') exportXLSX();
+    else if (type === 'pdf') exportPDF();
+    else exportCSV();
+  } catch (e) { console.error(e); showToast('Export error: ' + e.message); }
+};
+
+/* Jarvis guest — info saja, tanpa kontrol/aturan (read-only) */
+/* ============================================================
+     R-AI — backend aman, TIDADA API key di file ini.
+     Semua panggilan lewat server lokal /api/*.
+     Kunci API hanya ada di _secrets\keys.json (di luar folder web).
+     ============================================================ */
+const RAI_URL = '/api/chat';
+const RAI_TIMEOUT = 20000;
+let raiBackendOK = true;
+async function raiFetch(q) {
+  const ctrl = new AbortController();
+  const to = setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, RAI_TIMEOUT);
+  try {
+    const r = await fetch(RAI_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q: q, context: raiContext() }),
+      signal: ctrl.signal
+    });
+    if (!r.ok) throw new Error('R-AI HTTP ' + r.status);
+    const j = await r.json();
+    if (!j || !j.reply) throw new Error('R-AI kosong');
+    raiBackendOK = true;
+    return String(j.reply);
+  } catch (err) {
+    if (raiBackendOK) {
+      raiBackendOK = false;
+      try { showToast('Server R-AI belum jalan - jalankan server.ps1 (mode cadangan)'); } catch (e) {}
+    }
+    throw err;
+  } finally { clearTimeout(to); }
+}
+let jarvisOpened = false, jarvisVoice = true;
+const JL = (id, en) => state.lang === 'en' ? en : id;
+const escJ = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+function jarvisAddMsg(text, who, src) {
+  const box = $('jarvis-msgs');
+  if (!box) return null;
+  const d = document.createElement('div');
+  d.className = 'jarvis-msg ' + who;
+  d.innerHTML = escJ(text).replace(/\n/g, '<br>');
+  if (who === 'bot' && src) {
+    const cap = document.createElement('span');
+    cap.className = 'jarvis-src';
+    cap.textContent = src;
+    d.appendChild(cap);
+  }
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+  while (box.children.length > 60) box.firstChild.remove();
+  return d;
+}
+/* Pilih voice browser terbaik (cadangan terakhir) */
+let raiVoicePick = null;
+function pickRaiVoice() {
+  try {
+    if (!('speechSynthesis' in window)) return;
+    const vs = speechSynthesis.getVoices() || [];
+    if (!vs.length) return;
+    const tag = state.lang === 'en' ? 'en' : 'id';
+    const pool = vs.filter(v => v.lang && v.lang.toLowerCase().indexOf(tag) === 0);
+    const src = pool.length ? pool : vs;
+    const score = (v) => {
+      const n = ((v.name || '') + ' ' + (v.voiceURI || '')).toLowerCase();
+      let s = 0;
+      if (/natural|neural|premium|siri/.test(n)) s += 5;
+      if (/google/.test(n)) s += 3;
+      if (/online|cloud/.test(n)) s += 2;
+      if (v.localService === false) s += 2;
+      if (/female|woman|aurora|kejora|samantha|karen|moira|tessa|zira/.test(n)) s += 1;
+      if (/espeak|robot|pocomp|compact/.test(n)) s -= 6;
+      return s;
+    };
+    src.sort((a, b) => score(b) - score(a));
+    raiVoicePick = src[0] || null;
+  } catch (e) { raiVoicePick = null; }
+}
+function humanizeSpeak(t) {
+  return String(t || '')
+    .replace(/\[[A-Z_]+:[^\]]*\]/g, ' ')
+    .replace(/[*_#`>|~]/g, ' ')
+    .replace(/https?:\S+/g, ' ')
+    .replace(/\s*[-\u2013\u2014]\s*/g, ', ')
+    .replace(/(\d)\s*%/g, '$1 persen')
+    .replace(/\s{2,}/g, ' ')
+    .trim().slice(0, 300);
+}
+/* ============================================================
+   TTS — suara neural dari server (bukan suara robot browser)
+   1) /api/tts-neural  2) /api/tts  3) speechSynthesis (cadangan)
+   ============================================================ */
+let raiAudio = null, raiAudioURL = '';
+const RAI_TTS_MODE = 'auto';
+const RAI_TTS_VOICE = 'Kore';
+function ttsStop() {
+  try { if (raiAudio) { raiAudio.pause(); raiAudio.currentTime = 0; } } catch (e) {}
+  try { if ('speechSynthesis' in window) speechSynthesis.cancel(); } catch (e) {}
+}
+function ttsRaceFirst(jobs, ms) {
+  return new Promise((resolve) => {
+    if (!jobs.length) return resolve(null);
+    let pending = jobs.length, done = false;
+    const finish = (v) => { if (done) return; done = true; resolve(v); };
+    jobs.forEach(p => Promise.resolve(p).then(
+      v => { if (v) finish(v); else if (--pending === 0) finish(null); },
+      () => { if (--pending === 0) finish(null); }
+    ));
+    setTimeout(() => finish(null), ms);
+  });
+}
+async function ttsPlay(url, mime) {
+  ttsStop();
+  if (raiAudioURL) { try { URL.revokeObjectURL(raiAudioURL); } catch (e) {} }
+  raiAudioURL = URL.createObjectURL(new Blob([url], { type: mime }));
+  return await new Promise((res) => {
+    let settled = false;
+    const done = (v) => { if (settled) return; settled = true; res(v); };
+    try {
+      const a = new Audio(raiAudioURL);
+      raiAudio = a;
+      /* Sengaja TIDAK menunggu 'ended': yang dibutuhkan hanya konfirmasi
+         suara mulai. Menunggu ended bisa menggantung di perangkat tanpa
+         audio output. Jaring pengaman 8 detik tetap dipasang. */
+      const started = a.play();
+      if (started && started.catch) {
+        started.then(() => done(true)).catch(() => { try { a.onerror = null; } catch (e) {} done(false); });
+      } else { done(true); }
+      setTimeout(() => done(!a.paused), 8000);
+    } catch (e) { done(false); }
+  });
+}
+async function jarvisSpeak(txt) {
+  if (!jarvisVoice) return;
+  const clean = humanizeSpeak(txt);
+  if (!clean) return;
+  try { if (raiRec) raiRecStop(false); } catch (e) {}
+  if (RAI_TTS_MODE === 'off') return;
+  const lang = state.lang === 'en' ? 'en' : 'id';
+  const grab = async (path, payload, mime) => {
+    try {
+      const r = await fetch(path, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!r.ok) return null;
+      const buf = await r.arrayBuffer();
+      if (!buf.byteLength) return null;
+      return { buf: buf, mime: mime };
+    } catch (e) { return null; }
+  };
+  /* Balapan TTS. PENTING: /api/tts (cepat, ~0,4 detik, tanpa kuota) DIKIRIM
+     LEBIH DAHULU karena server memproses request satu per satu berurutan.
+     /api/tts-neural (Gemini) hanya 10 permintaan/hari gratis -> sering 429,
+     server otomatis melewatinya sementara waktu. */
+  const jobs = [];
+  if (RAI_TTS_MODE === 'auto' || RAI_TTS_MODE === 'fast')   jobs.push(grab('/api/tts', { text: clean, lang: lang }, 'audio/mpeg'));
+  if (RAI_TTS_MODE === 'auto' || RAI_TTS_MODE === 'neural') jobs.push(grab('/api/tts-neural', { text: clean, voice: RAI_TTS_VOICE }, 'audio/wav'));
+  const win = await ttsRaceFirst(jobs, 15000);
+  if (win) { if (await ttsPlay(win.buf, win.mime)) return; }
+  try {
+    if (!('speechSynthesis' in window)) return;
+    const u = new SpeechSynthesisUtterance(clean);
+    u.lang = lang === 'en' ? 'en-US' : 'id-ID';
+    if (raiVoicePick) u.voice = raiVoicePick;
+    u.rate = 0.97; u.pitch = 1.05; u.volume = 1;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+  } catch (e) {}
+}
+function jarvisMicUI(on) {
+  const fab = $('jarvis-fab'), mic = $('jarvis-mic');
+  if (fab) fab.classList.toggle('listening', on);
+  if (mic) mic.innerHTML = `<i class="fas ${on ? 'fa-stop' : 'fa-microphone'} text-xs"></i>`;
+}
+
+function jarvisSay(txt, speak = true, src = 'Lokal') { jarvisAddMsg(txt, 'bot', src); if (speak) jarvisSpeak(txt); }
+window.jarvisToggle = (open) => {
+  const p = $('jarvis-panel');
+  if (!p) return;
+  const willOpen = typeof open === 'boolean' ? open : !p.classList.contains('open');
+  p.classList.toggle('open', willOpen);
+  if (!willOpen) {
+    try { if (raiRec) raiRecStop(false); } catch (e) {}
+    try { speechSynthesis.cancel(); } catch (e) {}
+  }
+  if (willOpen) {
+    renderJarvisChips();
+    if (!jarvisOpened) {
+      jarvisOpened = true;
+      jarvisSay(JL(
+        'Halo! Saya R-AI, AI dari produsen R-LAB (mode guest, lihat saja). Tanya status atau angka apa pun.',
+        'Hello! I am R-AI, AI from R-LAB (guest view-only mode). Ask any status or numbers.'
+      ), false);
+    }
+    setTimeout(() => { const i = $('jarvis-text'); if (i) i.focus(); }, 250);
+  }
+};
+function renderJarvisChips() {
+  const box = $('jarvis-chips');
+  if (!box) return;
+  const chips = state.lang === 'en' ? ['Status', 'Total?', 'Error?', 'Help'] : ['Status', 'Total berapa?', 'Error berapa?', 'Bantuan'];
+  box.innerHTML = '';
+  chips.forEach(c => {
+    const b = document.createElement('button');
+    b.className = 'jarvis-chip';
+    b.innerText = c;
+    b.onclick = () => { $('jarvis-text').value = c; window.jarvisSend(); };
+    box.appendChild(b);
+  });
+}
+window.jarvisSpeakerToggle = () => {
+  jarvisVoice = !jarvisVoice;
+  if (!jarvisVoice) { try { speechSynthesis.cancel(); } catch (e) {} }
+  const b = $('jarvis-voice-btn');
+  if (b) b.innerHTML = `<i class="fas ${jarvisVoice ? 'fa-volume-up' : 'fa-volume-mute'} text-xs"></i>`;
+};
+function getRaiStatus() { return raiBackendOK ? 'online (server lokal)' : 'mode cadangan'; }
+function raiContext() {
+  const s = getSummary();
+  return 'Konteks live R-LAB (mode guest read-only): total=' + s.total + ', kuning=' + s.kuning + ', biru=' + s.biru +
+    ', merah=' + s.merah + ', error=' + s.gagal + ', sukses=' + s.rate + '%. Jawab sebagai info saja, tanpa tag aksi.';
+}
+const FREE_TIMEOUT = 8000;
+async function askRaiFree(q) {
+  const ctrl = new AbortController();
+  const to = setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, FREE_TIMEOUT);
+  try {
+    const full = 'Kamu R-AI, AI buatan R-LAB untuk pabrik sortir pintar. Jawab singkat sebagai info. Pertanyaan: ' + q;
+    const r = await fetch('https://text.pollinations.ai/' + encodeURIComponent(full.slice(0, 900)), { signal: ctrl.signal });
+    if (!r.ok) throw new Error('free ' + r.status);
+    let a = (await r.text() || '').trim();
+    a = a.replace(/saya adalah gemini|aku adalah gemini|i am gemini|i'm gemini/gi, 'saya R-AI').replace(/google/gi, 'R-LAB');
+    if (!a) throw new Error('empty');
+    return a;
+  } finally { clearTimeout(to); }
+}
+async function askRaiGuest(q) {
+  let a;
+  try {
+    a = await raiFetch(q);
+  } catch (e) {
+    raiBackendOK = false;
+    try {
+      const free = await askRaiFree(q);
+      if (free) return free;
+    } catch (e2) {}
+    throw e;
+  }
+  a = a.replace(/saya adalah gemini|aku adalah gemini|i am gemini|i'm gemini/gi, 'saya R-AI')
+       .replace(/chatgpt|gpt-oss|openai|langchain/i, 'R-LAB');
+  if (!a) throw new Error('empty');
+  a = a.replace(/\[(MODE:(Arm|Servo)|PAUSE|RESUME|TIMEOUT|MISSORT|EXPORT:(pdf|xlsx|csv))\]/gi, '').trim();
+  return a || JL('Siap.', 'Done.');
+}
+/* ============================================================
+   STT — rekam mikrofon -> server Whisper (bukan SpeechRecognition browser
+   yang sering gagal / butuh internet). Sekali sentuh: rekam, kirim, berhenti.
+   ============================================================ */
+let raiRec = null, raiRecStream = null, raiRecT0 = 0, raiRecSend = false;
+
+/* Transkode webm/opus -> WAV 16-bit mono di browser.
+   Dipakai sebagai cadangan bila Whisper menolak format webm. */
+async function blobToWav(blob) {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return null;
+  let ac = null;
+  try {
+    ac = new AC();
+    /* Tanpa perangkat audio, AudioContext bisa jadi 'suspended' dan
+       decodeAudioData hang selamanya -> resume + batas waktu. */
+    try { if (ac.state === 'suspended') await ac.resume(); } catch (e) {}
+    const ab = await blob.arrayBuffer();
+    const buf = await Promise.race([
+      ac.decodeAudioData(ab.slice(0),
+        function ok(b){}, function no(){ throw new Error('decode-fail'); }),
+      new Promise((_, rj) => setTimeout(() => rj(new Error('decode-timeout')), 6000))
+    ]);
+    const ch = Math.min(buf.numberOfChannels, 2);
+    const len = buf.length, sr = buf.sampleRate;
+    const b = new ArrayBuffer(44 + len * ch * 2);
+    const v = new DataView(b);
+    const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    w(0, 'RIFF'); v.setUint32(4, 36 + len * ch * 2, true); w(8, 'WAVE');
+    w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, ch, true);
+    v.setUint32(24, sr, true); v.setUint32(28, sr * ch * 2, true); v.setUint16(32, ch * 2, true); v.setUint16(34, 16, true);
+    w(36, 'data'); v.setUint32(40, len * ch * 2, true);
+    for (let c = 0; c < ch; c++) {
+      const d = buf.getChannelData(c);
+      for (let i = 0; i < len; i++) {
+        const s = Math.max(-1, Math.min(1, d[i]));
+        v.setInt16(44 + (i * ch + c) * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+      }
+    }
+    return new Blob([b], { type: 'audio/wav' });
+  } catch (e) { return null; }
+  finally { try { if (ac) ac.close(); } catch (e) {} }
+}
+
+async function sttTranscribe(blob) {
+  /* UTAMAKAN WAV: WebM hasil MediaRecorder sering ditolak Whisper.
+     Rekam -> transkode ke WAV 16-bit di browser -> kirim ke server.
+     Bila decode gagal, kirim format asli sebagai cadangan. */
+  let body = blob;
+  try { const wav = await blobToWav(blob); if (wav) body = wav; } catch (e) {}
+  const ctrl = new AbortController();
+  const to = setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, 30000);
+  try {
+    const r = await fetch('/api/stt', {
+      method: 'POST',
+      headers: { 'Content-Type': body.type || 'audio/wav' },
+      body: body,
+      signal: ctrl.signal
+    });
+    if (!r.ok) throw new Error('STT HTTP ' + r.status);
+    const j = await r.json();
+    if (!j || !j.text) throw new Error('STT kosong');
+    return String(j.text);
+  } finally { clearTimeout(to); }
+}
+function raiRecStop(sendIt) {
+  const rec = raiRec;
+  if (!rec) return;
+  raiRecSend = !!sendIt;
+  try { if (rec.state !== 'inactive') rec.stop(); } catch (e) {}
+}
+window.jarvisListen = () => {
+  if (raiRec) { raiRecStop(true); return; }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') {
+    return showToast(JL('Browser tidak mendukung rekam suara', 'Browser does not support voice recording'));
+  }
+  jarvisMicUI(true);
+  navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } })
+    .then((stream) => {
+      raiRecStream = stream;
+      let mime = '';
+      ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus', ''].some(m => {
+        if (!m) return true;
+        if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) { mime = m; return true; }
+        return false;
+      });
+      const rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+      raiRec = rec;
+      raiRecT0 = Date.now();
+      const chunks = [];
+      rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+      rec.onstop = async () => {
+        try { stream.getTracks().forEach(t => t.stop()); } catch (e) {}
+        raiRec = null; raiRecStream = null; jarvisMicUI(false);
+        const secs = (Date.now() - raiRecT0) / 1000;
+        const blob = new Blob(chunks, { type: rec.mimeType || mime || 'audio/webm' });
+        if (!raiRecSend || !blob.size) return;
+        if (secs < 0.6) {
+          showToast(JL('Terlalu pendek — tahan 1 detik sambil bicara. Ulangi ya.', 'Too short — hold 1s while speaking. Try again.'));
+          return;
+        }
+        try {
+          showToast(JL('Mendengarkan...', 'Transcribing...'));
+          const txt = (await sttTranscribe(blob)).trim();
+          if (!txt) return showToast(JL('Tidak ada suara terdeteksi', 'No speech detected'));
+          $('jarvis-text').value = txt;
+          window.jarvisSend();
+        } catch (e) {
+          showToast(JL('Gagal mengenali suara: ' + (e.message || e), 'Speech recognition failed'));
+        }
+      };
+      rec.start();
+      window.jarvisToggle(true);
+      setTimeout(() => { if (raiRec === rec) raiRecStop(true); }, RAI_REC_MAX_MS);
+    })
+    .catch((e) => {
+      jarvisMicUI(false);
+      const denied = e && (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError');
+      showToast(denied ? JL('Izin mikrofon ditolak', 'Mic permission denied')
+                       : JL('Tidak bisa akses mikrofon', 'Cannot access microphone'));
+    });
+};
+function jSummaryText() {
+  const s = getSummary();
+  return JL(
+    `Total ${s.total} (Kuning ${s.kuning}, Biru ${s.biru}, Merah ${s.merah}, Error ${s.gagal}, sukses ${s.rate}%).`,
+    `Total ${s.total} (Yellow ${s.kuning}, Blue ${s.biru}, Red ${s.merah}, Error ${s.gagal}, success ${s.rate}%).`
+  );
+}
+const GUEST_LOCKED = () => JL(
+  'Terkunci di mode guest (lihat saja). Buka mode admin untuk kontrol & aturan.',
+  'Locked in guest mode (view only). Open admin mode for controls & rules.'
+);
+window.jarvisSend = async () => {
+  const inp = $('jarvis-text');
+  const raw = (inp.value || '').trim();
+  if (!raw) return;
+  inp.value = '';
+  jarvisAddMsg(raw, 'user');
+  const t = ' ' + raw.toLowerCase().trim() + ' ';
+  const has = (...ws) => ws.some(w => t.includes(w));
+  const d = state.sortingData;
+  let reply = null;
+  if (has('halo', 'hallo', 'hai', 'hello', 'hi ', 'pagi', 'siang', 'sore', 'malam', 'hei')) {
+    reply = JL('Halo juga! Saya R-AI dari R-LAB. Mau cek status apa?', 'Hello! I am R-AI from R-LAB. What status to check?');
+  } else if (/kamu (ai|siapa)|siapa kamu|kamu (itu )?apa|nama kamu|namamu|what are you|who are you|your name/.test(t)) {
+    reply = JL('Saya R-AI — AI buatan R-LAB, gabungan dari beberapa model AI.', 'I am R-AI — an AI by R-LAB, a combination of several AI models.');
+  } else if (has('database apa', 'database yang', 'database mana', 'data apa', 'isi database', 'lihat database', 'password', 'api key', 'apikey', 'kunci', 'kredensial', 'credential', 'token rahasia', 'firebase')) {
+    reply = JL('Maaf, itu privasi — saya tidak bisa membagikan info database atau kredensial apa pun.', 'Sorry, that is private — I cannot share any database or credential info.');
+  } else if (has('bantuan', 'help', 'bisa apa')) {
+    reply = JL('Saya bisa menjawab: status, total, kuning, biru, merah, error. Kontrol terkunci di mode guest. Ketuk mic untuk bicara.', 'I can answer: status, total, yellow, blue, red, error. Controls are locked in guest mode. Tap mic to speak.');
+  } else if (has('total berapa', 'berapa total', 'how many total', 'total?')) {
+    reply = JL(`Total diproses ${d.total} barang. ${jSummaryText()}`, `Total processed ${d.total} items. ${jSummaryText()}`);
+  } else if (has('kuning') && has('berapa', 'jumlah', 'how many')) {
+    reply = JL(`Kuning: ${d.kuning}.`, `Yellow: ${d.kuning}.`);
+  } else if ((has('biru') || has('blue')) && has('berapa', 'jumlah', 'how many', 'blue')) {
+    reply = JL(`Biru: ${d.biru}.`, `Blue: ${d.biru}.`);
+  } else if ((has('merah') || has('red')) && has('berapa', 'jumlah', 'how many', 'red')) {
+    reply = JL(`Merah: ${d.merah}.`, `Red: ${d.merah}.`);
+  } else if (has('error', 'eror', 'gagal') && has('berapa', 'jumlah', 'how many')) {
+    reply = JL(`Error tercatat ${d.gagal} kali.`, `Errors logged ${d.gagal} times.`);
+  } else if (has('status', 'ringkasan', 'laporan', 'summary', 'report')) {
+    reply = jSummaryText();
+  } else if (has('ubah', 'ganti', 'mode', 'export', 'aturan', 'rule', 'reset', 'jeda', 'pause', 'hubungkan', 'connect', 'matikan', 'force', 'missort')) {
+    reply = GUEST_LOCKED();
+  }
+  if (reply) { jarvisSay(reply); return; }
+  const typing = jarvisAddMsg('...', 'bot');
+  let raiErr = null;
+  try {
+    const ans = await askRaiGuest(raw);
+    if (typing) typing.remove();
+    jarvisSay(ans, true, 'Model');
+    return;
+  } catch (e) {
+    if (typing) typing.remove();
+    raiErr = e;
+  }
+  jarvisSay(localOfflineReply());
+};
+
+function localOfflineReply() {
+  return JL('Mode lokal (guest): AI online tidak terjangkau, tapi saya tetap jawab dari data mesin. ' + jSummaryText() + ' Tanya saya soal status, total, warna (kuning/biru/merah), atau error.',
+    'Local mode (guest): online AI unreachable, but I still answer from machine data. ' + jSummaryText() + ' Ask me about status, total, colours (yellow/blue/red), or errors.');
+}
+
+(function boot() {
+  try {
+    const lt = localStorage.getItem('rlab_guest_theme'); if (lt === 'dark') document.documentElement.classList.add('dark');
+    const ll = localStorage.getItem('rlab_guest_lang'); if (ll === 'id' || ll === 'en') state.lang = ll;
+  } catch (e) { }
+  applyLang();
+  initChart();
+  updateUIStats();
+  window.connectFB();
+  try { pickRaiVoice(); if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = pickRaiVoice; } catch (e) {}
+})();
+</script>
+</body>
+</html>
