@@ -882,11 +882,22 @@ function renderFromData(data) {
   [['kuning', 'kuning'], ['biru', 'biru'], ['merah', 'merah'], ['gagal', 'gagal']].forEach(([key, color]) => {
     collectEntries(data[key]).forEach(e => {
       const isError = color === 'gagal';
-      const displayColor = isError && e.warna ? e.warna : (isError ? 'Unknown' : properName[color]);
-      events.push({ color, isError, displayColor, ts: Number(e.timestamp) || 0, mode: e.mode || '-' });
+      // Samakan database: warna dinormalisasi (tanpa Unknown), status & mode dari DB.
+      const kw = (window.raiKnownWarna && window.raiKnownWarna(isError ? e.warna : properName[color])) || null;
+      events.push({
+        color, isError,
+        warna: isError ? (kw || e.warna || null) : properName[color],
+        ts: Number(e.timestamp) || 0,
+        mode: e.mode || '-',
+        status: e.status || (isError ? 'Timeout/Error' : 'Berhasil')
+      });
     });
   });
+  // Isi warna kosong dari baris tetangga terdekat (referensi objek sama).
+  const ascFill = events.slice().sort((a, b) => a.ts - b.ts);
+  if (window.raiFillWarna) window.raiFillWarna(ascFill);
   events.sort((a, b) => b.ts - a.ts);
+  const disp = (w) => w || 'Unknown';
 
   /* Log export guest: urut waktu menaik, timestamp penuh, aman untuk Excel/CSV/PDF/DOCX */
   state.exportLogs = events
@@ -894,9 +905,10 @@ function renderFromData(data) {
     .sort((a, b) => a.ts - b.ts)
     .map(ev => ({
       timestamp: ev.ts ? fullTimestamp(new Date(ev.ts)) : '-',
-      warna: ev.displayColor,
+      datetime: ev.ts ? fullTimestamp(new Date(ev.ts)) : '-',
+      warna: disp(ev.warna),
       mode: ev.mode,
-      status: ev.isError ? 'Error' : 'Berhasil',
+      status: ev.status,
       nilai: ev.isError ? 0 : 1
     }));
 
@@ -908,14 +920,16 @@ function renderFromData(data) {
   const names = { Kuning: 'Kuning', Biru: 'Biru', Merah: 'Merah', Unknown: 'Unknown' };
   const iconMap = { Kuning: 'fas fa-circle', Biru: 'fas fa-circle', Merah: 'fas fa-circle', Unknown: 'fas fa-triangle-exclamation' };
   const colorStyle = { Kuning: 'color:#d97706', Biru: 'color:#1a2456', Merah: 'color:#b91c1c', Unknown: 'color:#f97316' };
-  panel.innerHTML = events.slice(0, 18).map(ev => `
+  panel.innerHTML = events.slice(0, 18).map(ev => {
+    const w = disp(ev.warna);
+    return `
     <div class="log-item">
-      <div class="log-ico" style="${colorStyle[ev.displayColor]}"><i class="${iconMap[ev.displayColor]}"></i></div>
+      <div class="log-ico" style="${colorStyle[w]}"><i class="${iconMap[w]}"></i></div>
       <div class="overflow-hidden">
-        <p class="text-[10px] font-bold t-main truncate">${names[ev.displayColor]}${ev.isError ? '' : ' Tersortir'}</p>
+        <p class="text-[10px] font-bold t-main truncate">${names[w]}${ev.isError ? '' : ' Tersortir'}</p>
         <p class="text-[9px] t-muted truncate">${ev.ts ? fullTimestamp(new Date(ev.ts)) : '-'} · ${ev.mode}</p>
       </div>
-    </div>`).join('');
+    </div>`; }).join('');
 }
 
 window.connectFB = () => {
@@ -1545,21 +1559,24 @@ function getErrorHistoryGuest(limit) {
     urut: i + 1,
     warna: r.warna,
     timestamp: r.timestamp,
-    mode: r.mode
+    datetime: r.datetime || r.timestamp,
+    mode: r.mode,
+    status: r.status || 'Error',
+    duration: r.duration || '—'
   }));
 }
 
 function errorHistoryTextGuest(limit) {
   const hist = getErrorHistoryGuest(limit);
   if (!hist.length) return JL('Belum ada eror dengan warna tercatat.', 'No errors with recorded colors yet.');
-  return hist.map(e => `${e.urut}. ${e.warna} — ${e.timestamp} (mode ${e.mode})`).join('; ');
+  return hist.map(e => `${e.urut}. ${e.warna} — ${e.datetime} (${e.status}, mode ${e.mode})`).join('; ');
 }
 
 function raiContext() {
   const s = getSummary();
   const errHist = getErrorHistoryGuest(5);
   const en = state.lang === 'en';
-  const errCtx = errHist.length ? (en ? '; error history (latest 5): ' : '; riwayat eror (5 terbaru): ') + errHist.map(e => `${e.warna}@${e.timestamp}`).join(', ') : '';
+  const errCtx = errHist.length ? (en ? '; error history (latest 5): ' : '; riwayat eror (5 terbaru): ') + errHist.map(e => `${e.warna}@${e.datetime}[${e.status}]`).join(', ') : '';
   const base = en
     ? 'R-LAB live context (guest read-only mode): total=' + s.total + ', yellow=' + s.kuning + ', blue=' + s.biru +
       ', red=' + s.merah + ', error=' + s.gagal + ', success=' + s.rate + '%' + errCtx + '. Answer as info only, no action tags.'
@@ -1767,13 +1784,13 @@ window.jarvisSend = async () => {
     if (!hist.length) {
       reply = JL('Belum ada eror dengan warna tercatat.', 'No errors with recorded colors yet.');
     } else if (has('pertama', 'first', '1', 'satu')) {
-      const e = hist[0]; reply = JL(`Eror pertama: ${e.warna} pada ${e.timestamp} (mode ${e.mode}).`, `First error: ${e.warna} at ${e.timestamp} (mode ${e.mode}).`);
+      const e = hist[0]; reply = JL(`Eror pertama: ${e.warna} pada ${e.datetime}, penanganan: ${e.status} (mode ${e.mode}).`, `First error: ${e.warna} at ${e.datetime}, handling: ${e.status} (mode ${e.mode}).`);
     } else if (has('kedua', 'second', '2', 'dua')) {
-      const e = hist[1]; reply = e ? JL(`Eror kedua: ${e.warna} pada ${e.timestamp} (mode ${e.mode}).`, `Second error: ${e.warna} at ${e.timestamp} (mode ${e.mode}).`) : JL('Belum ada eror kedua.', 'No second error yet.');
+      const e = hist[1]; reply = e ? JL(`Eror kedua: ${e.warna} pada ${e.datetime}, penanganan: ${e.status} (mode ${e.mode}).`, `Second error: ${e.warna} at ${e.datetime}, handling: ${e.status} (mode ${e.mode}).`) : JL('Belum ada eror kedua.', 'No second error yet.');
     } else if (has('ketiga', 'third', '3', 'tiga')) {
-      const e = hist[2]; reply = e ? JL(`Eror ketiga: ${e.warna} pada ${e.timestamp} (mode ${e.mode}).`, `Third error: ${e.warna} at ${e.timestamp} (mode ${e.mode}).`) : JL('Belum ada eror ketiga.', 'No third error yet.');
+      const e = hist[2]; reply = e ? JL(`Eror ketiga: ${e.warna} pada ${e.datetime}, penanganan: ${e.status} (mode ${e.mode}).`, `Third error: ${e.warna} at ${e.datetime}, handling: ${e.status} (mode ${e.mode}).`) : JL('Belum ada eror ketiga.', 'No third error yet.');
     } else if (has('terakhir', 'last')) {
-      const e = hist[hist.length - 1]; reply = JL(`Eror terakhir: ${e.warna} pada ${e.timestamp} (mode ${e.mode}).`, `Last error: ${e.warna} at ${e.timestamp} (mode ${e.mode}).`);
+      const e = hist[hist.length - 1]; reply = JL(`Eror terakhir: ${e.warna} pada ${e.datetime}, penanganan: ${e.status} (mode ${e.mode}).`, `Last error: ${e.warna} at ${e.datetime}, handling: ${e.status} (mode ${e.mode}).`);
     } else {
       reply = JL('Riwayat eror: ' + errorHistoryTextGuest(5), 'Error history: ' + errorHistoryTextGuest(5));
     }

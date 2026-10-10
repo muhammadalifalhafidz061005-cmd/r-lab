@@ -184,8 +184,8 @@ window.RAI_KNOWLEDGE = [
   {
     keys: ['error', 'eror', 'gagal', 'fail', 'kegagalan'],
     name: 'Error', enName: 'errors', countKey: 'gagal',
-    id: 'Objek error adalah yang gagal diklasifikasi atau masuk jalur yang salah (termasuk miss-sort yang dicatat). Jumlahnya masuk laporan dan memengaruhi tingkat keberhasilan.',
-    en: 'Error objects failed classification or went to the wrong lane (including logged miss-sorts). They appear in the report and affect the success rate.'
+    id: 'Objek error adalah yang gagal diklasifikasi atau masuk jalur yang salah. Setiap eror tercatat: kapan (tanggal+jamm), warna apa, dan penanganannya — "Timeout/Error" (otomatis 12 detik), "Force Timeout" (manual), atau "Manual QC" (miss-sort dicatat manual). Tanya "kapan eror pertama/terakhir" untuk detailnya.',
+    en: 'Error objects failed classification or went to the wrong lane. Each error is logged with: when (date+time), which colour, and its handling — "Timeout/Error" (automatic 12s), "Force Timeout" (manual), or "Manual QC" (manually logged miss-sort). Ask "when was the first/last error" for details.'
   },
   {
     keys: ['akurasi', 'accuracy', 'akurat', 'tepat', 'presisi', 'keberhasilan', 'success rate', 'persentase benar', 'berapa persen'],
@@ -369,6 +369,39 @@ window.RAI_KNOWLEDGE = [
     en: 'Correct — R-AI local mode is still in demo and under continuous development. Local answers are limited to machine data; when online AI is reachable, answers become far richer.'
   }
 ];
+
+/* Normalisasi warna ke Kuning/Biru/Merah. Kembalikan string atau null.
+   Dipakai export & dashboard supaya TIDAK PERNAH ada 'Unknown'. */
+window.raiKnownWarna = function (w) {
+  const s = String(w || '').toLowerCase();
+  if (!s) return null;
+  if (s.indexOf('kuning') !== -1 || s.indexOf('yellow') !== -1) return 'Kuning';
+  if (s.indexOf('biru') !== -1 || s.indexOf('blue') !== -1) return 'Biru';
+  if (s.indexOf('merah') !== -1 || s.indexOf('red') !== -1) return 'Merah';
+  return null;
+};
+/* Isi warna kosong/Unknown dari baris tetangga terdekat (array urut waktu
+   menaik). Mutasi langsung tiap baris (.warna). Baris tanpa warna valid
+   mengambil warna tetangga terdekat; bila seluruh dataset buta, dibiarkan. */
+window.raiFillWarna = function (rows) {
+  try {
+    if (!rows || !rows.length) return rows;
+    const known = window.raiKnownWarna;
+    let last = null, i = 0;
+    for (i = 0; i < rows.length; i++) {
+      const k = known(rows[i].warna);
+      if (k) { rows[i].warna = k; last = k; }
+    }
+    let next = null;
+    for (i = rows.length - 1; i >= 0; i--) {
+      const k = known(rows[i].warna);
+      if (k) { next = k; }
+      else if (next) { rows[i].warna = next; }
+      else if (last) { rows[i].warna = last; }
+    }
+  } catch (e) {}
+  return rows;
+};
 
 window.raiKnowledgeReply = function (raw, d, lang) {
   try {

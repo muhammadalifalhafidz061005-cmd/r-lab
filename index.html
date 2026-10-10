@@ -1841,7 +1841,15 @@ html.dark .icon-btn:hover{background:rgba(198,154,69,.12);}
   /* ================================================================== */
   window.executeTimeout = (expectedColor) => {
     if (state.pendingDetection === expectedColor || expectedColor === 'force') {
-      const failedColor = state.pendingDetection || 'Unknown';
+      // Warna JANGAN PERNAH Unknown: pakai warna pending, kalau kosong tebak
+      // dari deteksi terakhir / log terakhir (samakan database).
+      let failedColor = state.pendingDetection || null;
+      if (!failedColor) {
+        try { failedColor = inferMissortColor().toLowerCase(); } catch (e) { failedColor = null; }
+      }
+      const properColorName = failedColor
+        ? failedColor.charAt(0).toUpperCase() + failedColor.slice(1)
+        : 'Unknown';
       const durationMs = state.pendingStartTime ? (Date.now() - state.pendingStartTime) : null;
       const startedMode = state.pendingMode;
 
@@ -1850,6 +1858,8 @@ html.dark .icon-btn:hover{background:rgba(198,154,69,.12);}
       state.pendingMode = null;
       state.isCoolingDown = false;
       if (state.timeoutTimer) clearTimeout(state.timeoutTimer);
+
+      const errStatus = expectedColor === 'force' ? "Force Timeout" : "Timeout/Error";
 
       state.sortingData.gagal++;
       updateUIStats(); updateChart();
@@ -1866,18 +1876,16 @@ html.dark .icon-btn:hover{background:rgba(198,154,69,.12);}
 
       if (state.db) {
         update(ref(state.db, `${state.currentPath}/gagal`), {
-          [state.sortingData.gagal - 1]: { timestamp: nowMs, value: 1, warna: properColorName }
+          [state.sortingData.gagal - 1]: { timestamp: nowMs, value: 1, warna: properColorName, mode: errMode, status: errStatus }
         }).catch(e => console.error("Firebase Error:", e));
       }
-
-      const properColorName = failedColor.charAt(0).toUpperCase() + failedColor.slice(1);
 
       state.excelLogs.push({
         datetime: dateTimeStr,
         timestamp: timeStr,
         warna: properColorName,
-        mode: startedMode || $('mode-selector').value,
-        status: expectedColor === 'force' ? "Force Timeout" : "Timeout/Error",
+        mode: errMode,
+        status: errStatus,
         duration: formatDuration(durationMs),
         durationMs: durationMs || 0,
         nilai: 0
@@ -2022,7 +2030,7 @@ html.dark .icon-btn:hover{background:rgba(198,154,69,.12);}
 
     if (state.db) {
       await update(ref(state.db, `${state.currentPath}/gagal`), {
-        [state.sortingData.gagal - 1]: { timestamp: nowMs, value: 1, warna: missortColor }
+        [state.sortingData.gagal - 1]: { timestamp: nowMs, value: 1, warna: missortColor, mode: qcMode, status: 'Manual QC' }
       });
     }
   };
@@ -2543,13 +2551,15 @@ html.dark .icon-btn:hover{background:rgba(198,154,69,.12);}
     });
     collectEntries(data.gagal).forEach(e => {
       const ts = Number(e.timestamp) || 0;
-      const errWarna = e.warna || 'Unknown';
+      // Samakan database: warna dinormalisasi, status & mode dibaca dari DB.
+      // Baris tanpa warna valid diisi dari baris tetangga terdekat (tanpa Unknown).
+      const kw = (window.raiKnownWarna && window.raiKnownWarna(e.warna)) || null;
       out.push({
         datetime: ts ? formatDateTime(new Date(ts)) : '-',
         timestamp: ts ? new Date(ts).toLocaleTimeString('id-ID') : '-',
-        warna: errWarna,
+        warna: kw || e.warna || null,
         mode: e.mode || '-',
-        status: 'Timeout/Error',
+        status: e.status || 'Timeout/Error',
         duration: '—',
         durationMs: 0,
         nilai: 0,
@@ -2557,12 +2567,17 @@ html.dark .icon-btn:hover{background:rgba(198,154,69,.12);}
       });
     });
     out.sort((a, b) => a._ts - b._ts);
+    if (window.raiFillWarna) window.raiFillWarna(out);
     return out;
   }
-  /* Sumber export otomatis: database kalau connect, lokal kalau tidak */
+  /* Sumber export otomatis: database kalau connect, lokal kalau tidak.
+     Kedua jalur dinormalisasi supaya hasilnya sama persis dengan database. */
   function getExportRows() {
     if (state.db && state.dbData) return buildCloudLogs();
-    return state.excelLogs;
+    const rows = (state.excelLogs || []).map(r => Object.assign({}, r));
+    if (window.raiKnownWarna) rows.forEach(r => { r.warna = window.raiKnownWarna(r.warna) || r.warna; });
+    if (window.raiFillWarna) window.raiFillWarna(rows);
+    return rows;
   }
   function exportSourceTag() {
     return (state.db && state.dbData)
@@ -3326,7 +3341,7 @@ html.dark .icon-btn:hover{background:rgba(198,154,69,.12);}
     let mode = '-';
     try { mode = $('mode-selector').value; } catch (e) {}
     const errHist = getErrorHistory(5);
-    const errCtx = errHist.length ? '; riwayat eror (5 terbaru): ' + errHist.map(e => `${e.warna}@${e.timestamp}`).join(', ') : '';
+    const errCtx = errHist.length ? '; riwayat eror (5 terbaru): ' + errHist.map(e => `${e.warna}@${e.datetime}[${e.status}]`).join(', ') : '';
     return 'Konteks live R-LAB: total=' + s.total + ', kuning=' + s.kuning + ', biru=' + s.biru +
       ', merah=' + s.merah + ', error=' + s.gagal + ', sukses=' + s.rate + '%, mode=' + mode +
       ', bluetooth=' + (state.bleConnected ? 'online' : 'offline') + ', database=' + (state.db ? 'synced' : 'offline') +
