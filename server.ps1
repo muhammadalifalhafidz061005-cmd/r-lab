@@ -2,7 +2,7 @@
 #  R-LAB Smart Sorting — Server Lokal (Reverse Proxy)
 #  Fungsi:
 #    1. Menyajikan file statis (index.html, guest.html, assets, logo)
-#    2. /api/chat  -> Gemini primer, Groq + OpenRouter cadangan (kunci API TIDAK PERNAH ke browser)
+#    2. /api/chat  -> Gemini Flash semua (kunci API TIDAK PERNAH ke browser)
 #    3. /api/tts   -> Google Translate TTS (suara natural, ~1 detik)
 #    4. /api/tts-neural -> Gemini TTS (suara paling natural, ~6 detik)
 #
@@ -29,23 +29,30 @@ if (-not (Test-Path -LiteralPath $KEYS_FILE)) {
 }
 
 $KEYS = Get-Content -LiteralPath $KEYS_FILE -Raw | ConvertFrom-Json
-$GROQ_KEY    = $KEYS.groq_api_key
-$GOOGLE_KEY  = $KEYS.google_api_key
-$OPENROUTER_KEY = $KEYS.openrouter_api_key
+$GROQ_KEY       = $KEYS.groq_api_key
+$GROQ_KEY_2     = $KEYS.groq_api_key_2
+$GROQ_KEY_3     = $KEYS.groq_api_key_3
+$GOOGLE_KEY     = $KEYS.google_api_key
+$GOOGLE_KEY_2   = $KEYS.google_api_key_2
+$GOOGLE_KEY_3   = $KEYS.google_api_key_3
 
-# ============ R-AI: GEMINI PRIMER, GROQ + OPENROUTER CADANGAN ============
-# Urutan dicoba berurutan. Kalau limit habis / error / timeout,
-# otomatis pindah ke model berikutnya, terakhir OpenRouter.
+# ============ R-AI: CHAIN PRIORITAS API KEY ============
+# Urutan: Google Key Baru 1 -> Google Key Baru 2 -> Google Key Lama -> Groq Lama -> Groq Baru 1 -> Groq Baru 2 -> Local
 $CHAIN = @(
-  @{ p = 'gemini'; id = 'gemini-flash-lite-latest' },   # primer, paling cepat & hemat
-  @{ p = 'gemini'; id = 'gemini-flash-latest' },        # cadangan Gemini
-  @{ p = 'groq';   id = 'openai/gpt-oss-20b' },         # cadangan ke-2 (Groq)
-  @{ p = 'openrouter'; id = 'openai/gpt-oss-20b' }      # cadangan terakhir (OpenRouter)
+  @{ p = 'gemini'; id = 'gemini-flash-lite-latest'; key = 'google_api_key_2' },  # Key baru 1
+  @{ p = 'gemini'; id = 'gemini-flash-latest';      key = 'google_api_key_2' },  # Key baru 1 model flash
+  @{ p = 'gemini'; id = 'gemini-flash-lite-latest'; key = 'google_api_key_3' },  # Key baru 2
+  @{ p = 'gemini'; id = 'gemini-flash-latest';      key = 'google_api_key_3' },  # Key baru 2 model flash
+  @{ p = 'gemini'; id = 'gemini-flash-lite-latest'; key = 'google_api_key' },    # Key lama
+  @{ p = 'gemini'; id = 'gemini-flash-latest';      key = 'google_api_key' },    # Key lama model flash
+  @{ p = 'groq';   id = 'openai/gpt-oss-20b';       key = 'groq_api_key' },      # Groq lama
+  @{ p = 'groq';   id = 'openai/gpt-oss-20b';       key = 'groq_api_key_2' },    # Groq baru 1
+  @{ p = 'groq';   id = 'openai/gpt-oss-20b';       key = 'groq_api_key_3' }     # Groq baru 2
 )
 $CHAT_TIMEOUT = 12   # detik per percobaan
 $STT_MODEL    = 'whisper-large-v3-turbo'
 
-$RAI_SYS     = 'Namamu R-AI. Kamu asisten AI resmi buatan R-LAB untuk sistem Smart Sorting Factory (penyortir warna Kuning/Biru/Merah dengan mode Servo/Arm). Identitasmu: R-AI, AI buatan R-LAB. Aturan mutlak 1: jika ditanya kamu AI apa, siapa namamu, siapa pembuatmu, model apa yang mendasarimu, atau soal identitasmu, jawab singkat bahwa kamu R-AI, AI buatan R-LAB yang merupakan gabungan dari beberapa model AI. Jangan pernah mengaku sebagai satu model tertentu (ChatGPT, GPT, Gemini, Google, Claude, Llama, OpenAI, Groq, OpenRouter, atau AI lain). Jangan pernah menyebut nama model atau nama perusahaan pembuat model tertentu; selalu katakan gabungan dari beberapa model AI. Aturan mutlak 2: jika ditanya soal database, password, API key, kunci, kredensial, atau isi data sensitif, tolak sopan dengan alasan privasi dan jangan bocorkan apa pun. Aturan mutlak 3: thinking/diagnostic tokens-mu jangan pernah ditampilkan ke pengguna, langsung berikan jawaban final saja. Jawab singkat (maks 3 kalimat), bahasa Indonesia kecuali diminta Inggris.'
+$RAI_SYS     = 'Namamu R-AI. Kamu asisten AI resmi buatan R-LAB untuk sistem Smart Sorting Factory (penyortir warna Kuning/Biru/Merah dengan mode Servo/Arm). Identitasmu: R-AI, AI buatan R-LAB. Aturan mutlak 1: jika ditanya kamu AI apa, siapa namamu, siapa pembuatmu, model apa yang mendasarimu, atau soal identitasmu, jawab singkat bahwa kamu R-AI, AI buatan R-LAB yang merupakan gabungan dari beberapa model AI. Jangan pernah mengaku sebagai satu model tertentu (ChatGPT, GPT, Gemini, Google, Claude, Llama, OpenAI, Groq, OpenRouter, atau AI lain). Jangan pernah menyebut nama model atau nama perusahaan pembuat model tertentu; selalu katakan gabungan dari beberapa model AI. Aturan mutlak 2: jika ditanya soal database, password, API key, kunci, kredensial, atau isi data sensitif, tolak sopan dengan alasan privasi dan jangan bocorkan apa pun. Aturan mutlak 3: thinking/diagnostic tokens-mu jangan pernah ditampilkan ke pengguna, langsung berikan jawaban final saja. Aturan mutlak 4: gunakan konteks live yang disertakan (total, warna, error, riwayat eror dengan warna & timestamp) untuk menjawab pertanyaan historis seperti "kapan eror pertama/kedua/terakhir" — jawab dari konteks, jangan bilang data tidak ada. Jawab singkat (maks 3 kalimat), bahasa Indonesia kecuali diminta Inggris.'
 
 # ---------- cache TTS: teks -> audio bytes ----------
 $ttsCache = @{}
@@ -112,48 +119,34 @@ function Serve-Static($ctx, [string]$urlPath) {
   Send-Bytes $ctx $bytes $mime 200 @{ 'Cache-Control' = 'no-store' }
 }
 
-# ---------- /api/chat : GEMINI primer -> GROQ -> OPENROUTER cadangan ----------
-function Ask-Gemini($model, $userMsg) {
+# ---------- /api/chat : CHAIN MULTI-KEY ----------
+function Ask-Gemini($model, $userMsg, $apiKey) {
   $parts = @(@{ text = $RAI_SYS }, @{ text = $userMsg })
   $payload = @{
     contents          = @(,@{ parts = $parts })
     generationConfig  = @{ temperature = 0.3; maxOutputTokens = 512 }
   } | ConvertTo-Json -Depth 10
+  $payloadBytes = [System.Text.Encoding]::UTF8.GetBytes($payload)
   $r = Invoke-RestMethod -Uri "https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent" -Method Post `
-       -Headers @{ 'X-goog-api-key' = $GOOGLE_KEY } -ContentType 'application/json' `
-       -Body $payload -TimeoutSec $CHAT_TIMEOUT
+       -Headers @{ 'X-goog-api-key' = $apiKey } -ContentType 'application/json; charset=utf-8' `
+       -Body $payloadBytes -TimeoutSec $CHAT_TIMEOUT
   $cand = $r.candidates[0]
   if ($cand.finishReason -eq 'MAX_TOKENS') { throw 'terpotong' }
   $txt = ($cand.content.parts | ForEach-Object { $_.text }) -join ''
   if (-not $txt) { throw 'kosong' }
   return [string]$txt
 }
-function Ask-Groq($model, $userMsg) {
+
+function Ask-Groq($model, $userMsg, $apiKey) {
   $payload = @{
     model            = $model
     messages         = @(@{ role = 'system'; content = $RAI_SYS }, @{ role = 'user'; content = $userMsg })
     temperature      = 0.3
     max_tokens       = 512
-    reasoning_effort = 'low'
   } | ConvertTo-Json -Depth 10
   $r = Invoke-RestMethod -Uri 'https://api.groq.com/openai/v1/chat/completions' -Method Post `
-       -Headers @{ Authorization = "Bearer $GROQ_KEY" } -ContentType 'application/json' `
+       -Headers @{ Authorization = "Bearer $apiKey" } -ContentType 'application/json' `
        -Body $payload -TimeoutSec $CHAT_TIMEOUT
-  $txt = $r.choices[0].message.content
-  if (-not $txt) { throw 'kosong' }
-  return [string]$txt
-}
-function Ask-OpenRouter($model, $userMsg) {
-  if (-not $OPENROUTER_KEY) { throw 'openrouter key kosong' }
-  $payload = @{
-    model            = $model
-    messages         = @(@{ role = 'system'; content = $RAI_SYS }, @{ role = 'user'; content = $userMsg })
-    temperature      = 0.3
-    max_tokens       = 512
-  } | ConvertTo-Json -Depth 10
-  $r = Invoke-RestMethod -Uri 'https://openrouter.ai/api/v1/chat/completions' -Method Post `
-       -Headers @{ Authorization = "Bearer $OPENROUTER_KEY"; 'HTTP-Referer' = 'http://localhost:8080/'; 'X-Title' = 'R-LAB R-AI' } `
-       -ContentType 'application/json' -Body $payload -TimeoutSec $CHAT_TIMEOUT
   $txt = $r.choices[0].message.content
   if (-not $txt) { throw 'kosong' }
   return [string]$txt
@@ -173,12 +166,14 @@ function Handle-Chat($ctx) {
   $log = @()
   foreach ($step in $CHAIN) {
     try {
+      $prop = $KEYS.PSObject.Properties[$step.key]
+      if (-not $prop) { throw "Key {$step.key} tidak ditemukan di keys.json" }
+      $apiKey = $prop.Value
+      if (-not $apiKey) { throw "Key {$step.key} value kosong" }
       if ($step.p -eq 'gemini') {
-        $txt = Ask-Gemini $step.id $userMsg
+        $txt = Ask-Gemini $step.id $userMsg $apiKey
       } elseif ($step.p -eq 'groq') {
-        $txt = Ask-Groq $step.id $userMsg
-      } elseif ($step.p -eq 'openrouter') {
-        $txt = Ask-OpenRouter $step.id $userMsg
+        $txt = Ask-Groq $step.id $userMsg $apiKey
       } else {
         throw ('provider tak dikenal: ' + $step.p)
       }
@@ -228,6 +223,8 @@ function Handle-Stt($ctx) {
   $multi.Add($fc, 'file', "speech.$ext")
   $multi.Add((New-Object System.Net.Http.StringContent($STT_MODEL)), 'model')
   $multi.Add((New-Object System.Net.Http.StringContent('0')), 'temperature')
+  $sttLang = [string]$ctx.Request.QueryString['lang']
+  if ($sttLang -eq 'en' -or $sttLang -eq 'id') { $multi.Add((New-Object System.Net.Http.StringContent($sttLang)), 'language') }
   try {
     $resp = $h.PostAsync('https://api.groq.com/openai/v1/audio/transcriptions', $multi).Result
     $txt = $resp.Content.ReadAsStringAsync().Result

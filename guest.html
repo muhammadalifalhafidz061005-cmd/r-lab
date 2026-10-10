@@ -219,10 +219,55 @@ html.dark .mnav-btn:hover{background:rgba(148,163,184,.12);color:var(--text);}
 .export-tile:hover{transform:translateY(-2px);border-color:#e3cf9a;}
 @keyframes tileIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
 .modal.open .export-tile{animation:tileIn .35s ease-out both;}
+
+/* ============ POLISH: animasi & desain premium ============ */
+::selection{background:rgba(198,154,69,.35);}
+.page .card:nth-child(2){animation-delay:.05s;}
+.page .card:nth-child(3){animation-delay:.1s;}
+.page .card:nth-child(4){animation-delay:.15s;}
+.page .card:nth-child(5){animation-delay:.2s;}
+.page .card:nth-child(6){animation-delay:.25s;}
+.jarvis-chip{transition:background .18s ease,border-color .18s ease,color .18s ease;}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal.open .modal-backdrop{animation:fadeIn .25s ease-out both;}
+@keyframes modalSpring{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+.modal.open .modal-panel{animation:modalSpring .34s cubic-bezier(.2,.9,.3,1.15) both;}
+  @keyframes toastPop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+#toast.show .toast-inner{animation:toastPop .32s cubic-bezier(.2,.9,.3,1.2) both;}
+.export-tile{transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease;}
+.export-tile:hover{transform:translateY(-2px);}
+/* ============ REFINED MOTION: tenang, presisi, modern ============ */
+:root{--ease:cubic-bezier(.2,.8,.3,1);}
+@keyframes riseSoft{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.page .card{animation:riseSoft .28s var(--ease) both;}
+.page .card:nth-child(2){animation-delay:.04s;}
+.page .card:nth-child(3){animation-delay:.08s;}
+.page .card:nth-child(4){animation-delay:.12s;}
+.page .card:nth-child(5){animation-delay:.16s;}
+.page .card:nth-child(n+6){animation-delay:.2s;}
+.card-hover{transition:transform .2s var(--ease),box-shadow .2s var(--ease),border-color .2s var(--ease);}
+.card-hover:hover{transform:translateY(-2px);box-shadow:0 1px 2px rgba(15,23,42,.06),0 14px 28px -20px rgba(15,23,42,.35);}
+.card-hover:active{transform:translateY(0);}
+.btn-primary,.icon-btn,.side-btn,.jarvis-chip{transition:transform .15s var(--ease),background .18s ease,border-color .18s ease,color .18s ease;}
+.btn-primary:active,.icon-btn:active,.side-btn:active,.jarvis-chip:active{transform:scale(.96);}
+.icon-btn:hover{border-color:#e3cf9a;}
+.jarvis-msg.typing{animation:typingSoft 1.2s ease-in-out infinite;}
+@keyframes typingSoft{0%,100%{opacity:.5}50%{opacity:1}}
+#toast.show .toast-inner{animation:toastPop .28s var(--ease) both;}
+.live-dot{position:relative;}
+.live-dot::after{content:'';position:absolute;inset:-4px;border-radius:50%;border:1px solid rgba(34,197,94,.4);animation:ringSoft 2s var(--ease) infinite;}
+@keyframes ringSoft{0%{transform:scale(.6);opacity:1}100%{transform:scale(1.25);opacity:0}}
+
+/* Guest tanpa intro loader: langsung masuk, tanpa jeda. */
 .modal.open .export-tile:nth-child(2){animation-delay:.06s;}
 .modal.open .export-tile:nth-child(3){animation-delay:.12s;}
 .modal.open .export-tile:nth-child(4){animation-delay:.18s;}
 .metric-value,.font-mono{font-variant-numeric:tabular-nums;}
+/* Team cards — sama seperti mode admin */
+.team-card{position:relative;border-radius:1rem;padding:1.75rem 1.25rem 1.5rem;text-align:center;background:var(--surface);border:1px solid var(--border);overflow:hidden;transition:transform .2s var(--ease, ease),box-shadow .2s ease,border-color .2s ease;}
+.team-card:hover{transform:translateY(-2px);border-color:#c7d7f8;box-shadow:var(--shadow);}
+.team-avatar{width:64px;height:64px;border-radius:1rem;margin:0 auto .9rem;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.2rem;color:#fff;background:var(--c1);}
+.role-chip{display:inline-block;margin-top:.55rem;padding:.32rem .75rem;border-radius:999px;font-size:.6rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;background:var(--surface-soft);border:1px solid var(--border);color:var(--muted);}
 .guest-export-banner{
   background:#dc2626;color:#fff;border-radius:.8rem;
   padding:.8rem 1rem;text-align:center;
@@ -336,6 +381,7 @@ html:not(.dark) .jarvis-msg.bot{color:#0f172a;font-weight:500;}
       <div class="status-group" role="status" aria-label="Status koneksi">
         <div id="status-fb" class="pill">FB: MENGHUBUNGKAN...</div>
         <div id="status-delay" class="pill blue">±0.5 dtk</div>
+        <div class="pill warn" title="Mode lokal masih tahap demo dan akan terus dikembangkan">DEMO LOKAL</div>
       </div>
 
       <div class="topbar-actions">
@@ -345,6 +391,7 @@ html:not(.dark) .jarvis-msg.bot{color:#0f172a;font-weight:500;}
         </div>
         <button class="icon-btn" title="Back to Home" onclick="window.goHome()"><i class="fas fa-house text-xs"></i></button>
         <button id="lang-btn" class="icon-btn" title="ID/EN" onclick="window.toggleLang()" style="width:auto;padding:0 .7rem;font-size:.7rem;font-weight:800;">ID</button>
+        <button class="icon-btn" title="Pengaturan / Settings" onclick="window.openModal('settings-modal')"><i class="fas fa-gear text-xs"></i></button>
         <button class="icon-btn" title="Tema" onclick="window.toggleTheme()"><i class="fas fa-moon text-xs"></i></button>
         <button id="btn-retry" class="btn-primary px-3 py-2 text-[11px] font-bold hidden" onclick="window.connectFB()">HUBUNGKAN ULANG</button>
       </div>
@@ -352,6 +399,10 @@ html:not(.dark) .jarvis-msg.bot{color:#0f172a;font-weight:500;}
 
     <div class="scroll-area">
       <section class="page">
+        <div class="card p-3 mb-4 flex items-start gap-2.5" style="border-color:#fcd34d;background:#fffbeb;" role="note" aria-label="Info mode demo">
+          <i class="fas fa-flask text-sm mt-0.5" style="color:#b45309"></i>
+          <p class="text-[11px] leading-relaxed" style="color:#92400e" data-i18n="demo.banner"><b>Mode lokal masih tahap demo</b> dan akan terus dikembangkan. Jawaban R-AI di mode guest bersifat terbatas dari data mesin — tanya status, total, warna, atau riwayat eror.</p>
+        </div>
         <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-5">
           <div>
             <div class="flex items-center gap-2 mb-1">
@@ -424,25 +475,45 @@ html:not(.dark) .jarvis-msg.bot{color:#0f172a;font-weight:500;}
           </div>
         </div>
 
-        <div id="guest-dev" class="card p-4 sm:p-5 mt-4 sm:mt-5">
-          <h3 class="card-title mb-1"><i class="fas fa-users"></i><span data-i18n="guest.devTitle">Developer R-LAB</span></h3>
-          <p class="text-[11px] t-muted mb-3" data-i18n="guest.devSub">Tim di balik mesin penyortir pintar ini.</p>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div class="rounded-xl p-4 border text-center" style="background:var(--surface-soft);border-color:var(--border)">
-              <div class="w-11 h-11 rounded-xl mx-auto mb-2 flex items-center justify-center text-white font-extrabold" style="background:#b45309">HA</div>
-              <p class="font-bold text-sm t-main">Hamzah Aufa Ibrahim</p>
-              <p class="text-[10px] t-muted mt-0.5">Mekanik</p>
+        <div id="guest-dev" class="mt-4 sm:mt-5">
+          <p class="text-[11px] font-bold mb-2 text-center" style="color:var(--brand)" data-i18n="team.eyebrow">Tim Di Balik Mesin Ini</p>
+          <h3 class="font-display text-2xl font-extrabold mb-2 text-center t-main">R-LAB</h3>
+          <p class="text-xs t-muted leading-relaxed max-w-xl mx-auto text-center mb-4" data-i18n="team.desc">Sinergi antara mekanik, kecerdasan artifisial, dan elektronika — membangun sistem penyortiran cerdas otonom untuk panggung internasional.</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
+            <div class="team-card" style="--c1:#b45309">
+              <div class="team-avatar">HA</div>
+              <h3 class="font-bold text-base t-main">Hamzah Aufa Ibrahim</h3>
+              <span class="role-chip" data-i18n="team.role1">Mekanik</span>
+              <p class="text-[12px] t-muted mt-3 leading-relaxed" data-i18n="team.desc1">Desain mekanik, fabrikasi chassis, dan perakitan aktuator penyortir.</p>
             </div>
-            <div class="rounded-xl p-4 border text-center" style="background:var(--surface-soft);border-color:var(--border)">
-              <div class="w-11 h-11 rounded-xl mx-auto mb-2 flex items-center justify-center text-white font-extrabold" style="background:#1a2456">MA</div>
-              <p class="font-bold text-sm t-main">Muhammad Alif Al Hafidz</p>
-              <p class="text-[10px] t-muted mt-0.5">Programmer Website dan AI</p>
+            <div class="team-card" style="--c1:#1a2456">
+              <div class="team-avatar">MA</div>
+              <h3 class="font-bold text-base t-main">Muhammad Alif Al Hafidz</h3>
+              <span class="role-chip" data-i18n="team.role2">Programmer Website dan AI</span>
+              <p class="text-[12px] t-muted mt-3 leading-relaxed" data-i18n="team.desc2">Rekayasa dasbor, pipeline data real-time, dan pelatihan model computer vision.</p>
             </div>
-            <div class="rounded-xl p-4 border text-center" style="background:var(--surface-soft);border-color:var(--border)">
-              <div class="w-11 h-11 rounded-xl mx-auto mb-2 flex items-center justify-center text-white font-extrabold" style="background:#97742a">NA</div>
-              <p class="font-bold text-sm t-main">Naufal Ahmad Bilal</p>
-              <p class="text-[10px] t-muted mt-0.5">Programmer Otak Robot dan Elektronika</p>
+            <div class="team-card" style="--c1:#97742a">
+              <div class="team-avatar">NA</div>
+              <h3 class="font-bold text-base t-main">Ahmad Bilal Alfatih</h3>
+              <span class="role-chip" data-i18n="team.role3">Programmer Code Otak Robot dan Elektronika</span>
+              <p class="text-[12px] t-muted mt-3 leading-relaxed" data-i18n="team.desc3">Firmware embedded, protokol UART micro:bit, dan pengkabelan elektronika.</p>
             </div>
+            <div class="team-card" style="--c1:#0d9488">
+              <div class="team-avatar">AP</div>
+              <h3 class="font-bold text-base t-main">Anandha Putra Biankan</h3>
+              <span class="role-chip" data-i18n="team.role4">Mekanik</span>
+              <p class="text-[12px] t-muted mt-3 leading-relaxed" data-i18n="team.desc4">Perakitan mekanik, fabrikasi struktural, dan pemeliharaan mekanisme sortir.</p>
+            </div>
+            <div class="team-card" style="--c1:#7c3aed">
+              <div class="team-avatar">RF</div>
+              <h3 class="font-bold text-base t-main">Rafandra</h3>
+              <span class="role-chip" data-i18n="team.role5">Mekanik</span>
+              <p class="text-[12px] t-muted mt-3 leading-relaxed" data-i18n="team.desc5">Integrasi sistem mekanik, kalibrasi aktuator, dan pengujian perangkat keras.</p>
+            </div>
+          </div>
+          <div class="card p-5 max-w-5xl mx-auto mt-4 text-center">
+            <p class="font-display text-xs font-bold" style="color:var(--brand)">R-LAB · 2026</p>
+            <p class="text-[11px] t-muted mt-2" data-i18n="team.footer">Dirancang untuk Kompetisi Robotika &amp; AI Internasional.</p>
           </div>
         </div>
       </section>
@@ -534,11 +605,30 @@ html:not(.dark) .jarvis-msg.bot{color:#0f172a;font-weight:500;}
   </div>
 </div>
 
+<!-- ===================== MODAL: SETTINGS (GUEST) ===================== -->
+<div id="settings-modal" class="modal">
+  <div class="modal-backdrop" onclick="window.closeModal('settings-modal')"></div>
+  <div class="modal-panel">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-extrabold text-base flex items-center gap-2"><i class="fas fa-gear" style="color:var(--brand)"></i><span data-i18n="set.title">Pengaturan</span></h3>
+      <button onclick="window.closeModal('settings-modal')" class="icon-btn"><i class="fas fa-xmark text-xs"></i></button>
+    </div>
+    <p class="text-[10px] font-bold uppercase t-muted mb-2" data-i18n="set.langTitle">Bahasa / Language</p>
+    <div class="grid grid-cols-2 gap-2 mb-1" role="group" aria-label="Language">
+      <button id="lang-id-btn" class="side-btn" onclick="window.setGuestLang('id')"><i class="fas fa-language"></i><span>Indonesia</span></button>
+      <button id="lang-en-btn" class="side-btn" onclick="window.setGuestLang('en')"><i class="fas fa-language"></i><span>English</span></button>
+    </div>
+    <p class="text-[10px] t-muted mb-4 leading-relaxed" data-i18n="set.langNote">AI (R-AI) otomatis menjawab dalam bahasa yang dipilih, termasuk suara.</p>
+    <p class="text-[10px] font-bold uppercase t-muted mb-2" data-i18n="set.voiceTitle">Suara / Voice</p>
+    <button id="voice-toggle-btn" class="side-btn w-full" onclick="window.jarvisSpeakerToggle();window.refreshVoiceBtn();"><i class="fas fa-volume-up"></i><span data-i18n="set.voiceOn">Suara R-AI: ON</span></button>
+  </div>
+</div>
+
 <button id="jarvis-fab" aria-label="Buka Jarvis AI" onclick="window.jarvisToggle()"><i class="fas fa-robot"></i></button>
 <div id="jarvis-panel" role="dialog" aria-label="Jarvis AI R-LAB">
   <div class="jarvis-head">
     <img src="logo.png" alt="R-LAB">
-    <div class="t"><b>R-AI</b><small id="jarvis-sub">Guest · tanya info saja</small></div>
+    <div class="t"><b>R-AI</b><small id="jarvis-sub" data-i18n="jarvis.sub">Guest · tanya info saja</small></div>
     <button class="icon-btn" id="jarvis-voice-btn" title="Suara on/off" onclick="window.jarvisSpeakerToggle()" style="width:32px;height:32px;"><i class="fas fa-volume-up text-xs"></i></button>
     <button class="icon-btn" title="Tutup" onclick="window.jarvisToggle(false)" style="width:32px;height:32px;"><i class="fas fa-xmark text-xs"></i></button>
   </div>
@@ -582,7 +672,20 @@ const I18N = {
     'chart.title': 'Distribusi Penyortiran', 'log.title': 'Riwayat Langsung', 'log.empty': 'Menunggu data dari Firebase...',
     'btn.export': 'Export Laporan', 'exp.strip': 'Unduh laporan dari data realtime ini',
     'exp.guestTitle': 'EXPORT IN GUEST', 'exp.title': 'Export Report', 'exp.choose': 'Pilih format',
-    'exp.note': 'Laporan guest: header EXPORT IN GUEST, ringkasan sortir + error, timestamp penuh, baris berwarna.'
+    'exp.note': 'Laporan guest: header EXPORT IN GUEST, ringkasan sortir + error, timestamp penuh, baris berwarna.',
+    'demo.banner': '<b>Mode lokal masih tahap demo</b> dan akan terus dikembangkan. Jawaban R-AI di mode guest bersifat terbatas dari data mesin — tanya status, total, warna, atau riwayat eror.',
+    'set.title': 'Pengaturan', 'set.langTitle': 'Bahasa / Language', 'set.langNote': 'AI (R-AI) otomatis menjawab dalam bahasa yang dipilih, termasuk suara.',
+    'set.voiceTitle': 'Suara / Voice', 'set.voiceOn': 'Suara R-AI: ON', 'set.voiceOff': 'Suara R-AI: OFF',
+    'jarvis.sub': 'Guest · tanya info saja', 'jarvis.ask': 'Tanya R-AI...',
+    'team.eyebrow': 'Tim Di Balik Mesin Ini',
+    'team.desc': 'Sinergi antara mekanik, kecerdasan artifisial, dan elektronika — membangun sistem penyortiran cerdas otonom untuk panggung internasional.',
+    'team.role1': 'Mekanik', 'team.role2': 'Programmer Website dan AI', 'team.role3': 'Programmer Code Otak Robot dan Elektronika', 'team.role4': 'Mekanik', 'team.role5': 'Mekanik',
+    'team.desc1': 'Desain mekanik, fabrikasi chassis, dan perakitan aktuator penyortir.',
+    'team.desc2': 'Rekayasa dasbor, pipeline data real-time, dan pelatihan model computer vision.',
+    'team.desc3': 'Firmware embedded, protokol UART micro:bit, dan pengkabelan elektronika.',
+    'team.desc4': 'Perakitan mekanik, fabrikasi struktural, dan pemeliharaan mekanisme sortir.',
+    'team.desc5': 'Integrasi sistem mekanik, kalibrasi aktuator, dan pengujian perangkat keras.',
+    'team.footer': 'Dirancang untuk Kompetisi Robotika & AI Internasional.'
   },
   en: {
     'brand.tag': 'Smart Sorting System', 'guest.badge': 'Guest Mode — View Only', 'guest.conn': 'Connection Status', 'guest.dev': 'Developer', 'guest.devTitle': 'R-LAB Developers', 'guest.devSub': 'The team behind this smart sorting machine.',
@@ -595,7 +698,20 @@ const I18N = {
     'chart.title': 'Sorting Distribution', 'log.title': 'Live History', 'log.empty': 'Waiting for Firebase data...',
     'btn.export': 'Export Report', 'exp.strip': 'Download a report from this realtime data',
     'exp.guestTitle': 'EXPORT IN GUEST', 'exp.title': 'Export Report', 'exp.choose': 'Choose a format',
-    'exp.note': 'Guest report: EXPORT IN GUEST header, sort + error summary, full timestamps, colored rows.'
+    'exp.note': 'Guest report: EXPORT IN GUEST header, sort + error summary, full timestamps, colored rows.',
+    'demo.banner': '<b>Local mode is still in demo</b> and under continuous development. R-AI answers in guest mode are limited to machine data — ask status, totals, colors, or error history.',
+    'set.title': 'Settings', 'set.langTitle': 'Language / Bahasa', 'set.langNote': 'The AI (R-AI) automatically replies in the selected language, including voice.',
+    'set.voiceTitle': 'Voice / Suara', 'set.voiceOn': 'R-AI voice: ON', 'set.voiceOff': 'R-AI voice: OFF',
+    'jarvis.sub': 'Guest · info questions only', 'jarvis.ask': 'Ask R-AI...',
+    'team.eyebrow': 'The Team Behind The Machine',
+    'team.desc': 'A synergy of mechanics, artificial intelligence and electronics — building an autonomous smart sorting system for the international stage.',
+    'team.role1': 'Mechanic', 'team.role2': 'Website & AI Programmer', 'team.role3': 'Robot Brain Code & Electronics Programmer', 'team.role4': 'Mechanic', 'team.role5': 'Mechanic',
+    'team.desc1': 'Mechanical design, chassis fabrication and sorting actuator assembly.',
+    'team.desc2': 'Dashboard engineering, real-time data pipeline and computer-vision model training.',
+    'team.desc3': 'Embedded firmware, micro:bit UART protocol and electronic wiring.',
+    'team.desc4': 'Mechanical assembly, structural fabrication and sorting mechanism maintenance.',
+    'team.desc5': 'Mechanical systems integration, actuator calibration and hardware testing.',
+    'team.footer': 'Engineered for the International Robotics & AI Competition.'
   }
 };
 
@@ -628,10 +744,16 @@ window.toggleTheme = () => {
   try { localStorage.setItem('rlab_guest_theme', dark ? 'dark' : 'light'); } catch (e) { }
 };
 window.toggleLang = () => {
-  state.lang = state.lang === 'id' ? 'en' : 'id';
+  window.setGuestLang(state.lang === 'id' ? 'en' : 'id');
+};
+window.setGuestLang = (l) => {
+  if (l !== 'id' && l !== 'en') return;
+  state.lang = l;
   try { localStorage.setItem('rlab_guest_lang', state.lang); } catch (e) { }
   applyLang();
+  try { pickRaiVoice(); } catch (e) {}
 };
+window.refreshVoiceBtn = () => { applyLang(); };
 function applyLang() {
   document.documentElement.lang = state.lang;
   document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -639,6 +761,15 @@ function applyLang() {
     if (v !== undefined) el.innerHTML = v;
   });
   $('lang-btn').innerText = state.lang.toUpperCase();
+  const pr = document.querySelectorAll('.side-btn');
+  const idB = $('lang-id-btn'), enB = $('lang-en-btn');
+  if (idB) idB.classList.toggle('active', state.lang === 'id');
+  if (enB) enB.classList.toggle('active', state.lang === 'en');
+  const js = $('jarvis-sub'); if (js) js.innerText = I18N[state.lang]['jarvis.sub'];
+  const ji = $('jarvis-text'); if (ji) ji.placeholder = I18N[state.lang]['jarvis.ask'];
+  const vb = $('voice-toggle-btn');
+  if (vb) vb.querySelector('span').innerText = I18N[state.lang][jarvisVoice ? 'set.voiceOn' : 'set.voiceOff'];
+  if (typeof renderJarvisChips === 'function' && typeof jarvisOpened !== 'undefined' && jarvisOpened) { try { renderJarvisChips(); } catch (e) {} }
   if (state.chart) { state.chart.data.labels = chartLabels(); state.chart.update('none'); }
 }
 
@@ -750,7 +881,9 @@ function renderFromData(data) {
   const properName = { kuning: 'Kuning', biru: 'Biru', merah: 'Merah' };
   [['kuning', 'kuning'], ['biru', 'biru'], ['merah', 'merah'], ['gagal', 'gagal']].forEach(([key, color]) => {
     collectEntries(data[key]).forEach(e => {
-      events.push({ color, ts: Number(e.timestamp) || 0, mode: e.mode || '-' });
+      const isError = color === 'gagal';
+      const displayColor = isError && e.warna ? e.warna : (isError ? 'Unknown' : properName[color]);
+      events.push({ color, isError, displayColor, ts: Number(e.timestamp) || 0, mode: e.mode || '-' });
     });
   });
   events.sort((a, b) => b.ts - a.ts);
@@ -761,10 +894,10 @@ function renderFromData(data) {
     .sort((a, b) => a.ts - b.ts)
     .map(ev => ({
       timestamp: ev.ts ? fullTimestamp(new Date(ev.ts)) : '-',
-      warna: ev.color === 'gagal' ? 'Unknown' : properName[ev.color],
+      warna: ev.displayColor,
       mode: ev.mode,
-      status: ev.color === 'gagal' ? 'Error' : 'Berhasil',
-      nilai: ev.color === 'gagal' ? 0 : 1
+      status: ev.isError ? 'Error' : 'Berhasil',
+      nilai: ev.isError ? 0 : 1
     }));
 
   const panel = $('log-panel');
@@ -772,13 +905,14 @@ function renderFromData(data) {
     panel.innerHTML = `<p class="text-[11px] t-muted italic">${I18N[state.lang]['log.empty']}</p>`;
     return;
   }
-  const names = { kuning: 'Kuning', biru: 'Biru', merah: 'Merah', gagal: 'Error' };
-  const icons = { kuning: 'fas fa-circle', biru: 'fas fa-circle', merah: 'fas fa-circle', gagal: 'fas fa-triangle-exclamation' };
+  const names = { Kuning: 'Kuning', Biru: 'Biru', Merah: 'Merah', Unknown: 'Unknown' };
+  const iconMap = { Kuning: 'fas fa-circle', Biru: 'fas fa-circle', Merah: 'fas fa-circle', Unknown: 'fas fa-triangle-exclamation' };
+  const colorStyle = { Kuning: 'color:#d97706', Biru: 'color:#1a2456', Merah: 'color:#b91c1c', Unknown: 'color:#f97316' };
   panel.innerHTML = events.slice(0, 18).map(ev => `
     <div class="log-item">
-      <div class="log-ico" style="${COLOR_STYLE[ev.color]}"><i class="${icons[ev.color]}"></i></div>
+      <div class="log-ico" style="${colorStyle[ev.displayColor]}"><i class="${iconMap[ev.displayColor]}"></i></div>
       <div class="overflow-hidden">
-        <p class="text-[10px] font-bold t-main truncate">${names[ev.color]}${ev.color === 'gagal' ? '' : ' Tersortir'}</p>
+        <p class="text-[10px] font-bold t-main truncate">${names[ev.displayColor]}${ev.isError ? '' : ' Tersortir'}</p>
         <p class="text-[9px] t-muted truncate">${ev.ts ? fullTimestamp(new Date(ev.ts)) : '-'} · ${ev.mode}</p>
       </div>
     </div>`).join('');
@@ -1399,17 +1533,48 @@ window.jarvisSpeakerToggle = () => {
   if (b) b.innerHTML = `<i class="fas ${jarvisVoice ? 'fa-volume-up' : 'fa-volume-mute'} text-xs"></i>`;
 };
 function getRaiStatus() { return raiBackendOK ? 'online (server lokal)' : 'mode cadangan'; }
+
+function getErrorHistoryGuest(limit) {
+  const logs = (state.exportLogs || []).filter(r => r.nilai === 0 && r.warna !== 'Unknown');
+  const sorted = logs.slice().sort((a, b) => {
+    const ta = a.timestamp ? new Date(a.timestamp.replace(/(\d{2})\.(\d{2})\.(\d{4})/, '$3-$2-$1')).getTime() : 0;
+    const tb = b.timestamp ? new Date(b.timestamp.replace(/(\d{2})\.(\d{2})\.(\d{4})/, '$3-$2-$1')).getTime() : 0;
+    return ta - tb;
+  });
+  return (limit ? sorted.slice(0, limit) : sorted).map((r, i) => ({
+    urut: i + 1,
+    warna: r.warna,
+    timestamp: r.timestamp,
+    mode: r.mode
+  }));
+}
+
+function errorHistoryTextGuest(limit) {
+  const hist = getErrorHistoryGuest(limit);
+  if (!hist.length) return JL('Belum ada eror dengan warna tercatat.', 'No errors with recorded colors yet.');
+  return hist.map(e => `${e.urut}. ${e.warna} — ${e.timestamp} (mode ${e.mode})`).join('; ');
+}
+
 function raiContext() {
   const s = getSummary();
-  return 'Konteks live R-LAB (mode guest read-only): total=' + s.total + ', kuning=' + s.kuning + ', biru=' + s.biru +
-    ', merah=' + s.merah + ', error=' + s.gagal + ', sukses=' + s.rate + '%. Jawab sebagai info saja, tanpa tag aksi.';
+  const errHist = getErrorHistoryGuest(5);
+  const en = state.lang === 'en';
+  const errCtx = errHist.length ? (en ? '; error history (latest 5): ' : '; riwayat eror (5 terbaru): ') + errHist.map(e => `${e.warna}@${e.timestamp}`).join(', ') : '';
+  const base = en
+    ? 'R-LAB live context (guest read-only mode): total=' + s.total + ', yellow=' + s.kuning + ', blue=' + s.biru +
+      ', red=' + s.merah + ', error=' + s.gagal + ', success=' + s.rate + '%' + errCtx + '. Answer as info only, no action tags.'
+    : 'Konteks live R-LAB (mode guest read-only): total=' + s.total + ', kuning=' + s.kuning + ', biru=' + s.biru +
+      ', merah=' + s.merah + ', error=' + s.gagal + ', sukses=' + s.rate + '%' + errCtx + '. Jawab sebagai info saja, tanpa tag aksi.';
+  return base + (en ? ' Reply in English.' : '');
 }
 const FREE_TIMEOUT = 8000;
 async function askRaiFree(q) {
   const ctrl = new AbortController();
   const to = setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, FREE_TIMEOUT);
   try {
-    const full = 'Kamu R-AI, AI buatan R-LAB untuk pabrik sortir pintar. Jawab singkat sebagai info. Pertanyaan: ' + q;
+    const full = state.lang === 'en'
+      ? 'You are R-AI, an AI made by R-LAB for a smart sorting factory. Answer briefly as info, in English. Question: ' + q
+      : 'Kamu R-AI, AI buatan R-LAB untuk pabrik sortir pintar. Jawab singkat sebagai info. Pertanyaan: ' + q;
     const r = await fetch('https://text.pollinations.ai/' + encodeURIComponent(full.slice(0, 900)), { signal: ctrl.signal });
     if (!r.ok) throw new Error('free ' + r.status);
     let a = (await r.text() || '').trim();
@@ -1489,7 +1654,7 @@ async function sttTranscribe(blob) {
   const ctrl = new AbortController();
   const to = setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, 30000);
   try {
-    const r = await fetch('/api/stt', {
+    const r = await fetch('/api/stt?lang=' + (state.lang === 'en' ? 'en' : 'id'), {
       method: 'POST',
       headers: { 'Content-Type': body.type || 'audio/wav' },
       body: body,
@@ -1597,6 +1762,21 @@ window.jarvisSend = async () => {
     reply = JL(`Merah: ${d.merah}.`, `Red: ${d.merah}.`);
   } else if (has('error', 'eror', 'gagal') && has('berapa', 'jumlah', 'how many')) {
     reply = JL(`Error tercatat ${d.gagal} kali.`, `Errors logged ${d.gagal} times.`);
+  } else if (has('error', 'eror', 'gagal') && has('kapan', 'when', 'waktu', 'jam', 'pertama', 'kedua', 'ketiga', 'terakhir', 'last', 'first', 'second', 'riwayat', 'history')) {
+    const hist = getErrorHistoryGuest(10);
+    if (!hist.length) {
+      reply = JL('Belum ada eror dengan warna tercatat.', 'No errors with recorded colors yet.');
+    } else if (has('pertama', 'first', '1', 'satu')) {
+      const e = hist[0]; reply = JL(`Eror pertama: ${e.warna} pada ${e.timestamp} (mode ${e.mode}).`, `First error: ${e.warna} at ${e.timestamp} (mode ${e.mode}).`);
+    } else if (has('kedua', 'second', '2', 'dua')) {
+      const e = hist[1]; reply = e ? JL(`Eror kedua: ${e.warna} pada ${e.timestamp} (mode ${e.mode}).`, `Second error: ${e.warna} at ${e.timestamp} (mode ${e.mode}).`) : JL('Belum ada eror kedua.', 'No second error yet.');
+    } else if (has('ketiga', 'third', '3', 'tiga')) {
+      const e = hist[2]; reply = e ? JL(`Eror ketiga: ${e.warna} pada ${e.timestamp} (mode ${e.mode}).`, `Third error: ${e.warna} at ${e.timestamp} (mode ${e.mode}).`) : JL('Belum ada eror ketiga.', 'No third error yet.');
+    } else if (has('terakhir', 'last')) {
+      const e = hist[hist.length - 1]; reply = JL(`Eror terakhir: ${e.warna} pada ${e.timestamp} (mode ${e.mode}).`, `Last error: ${e.warna} at ${e.timestamp} (mode ${e.mode}).`);
+    } else {
+      reply = JL('Riwayat eror: ' + errorHistoryTextGuest(5), 'Error history: ' + errorHistoryTextGuest(5));
+    }
   } else if (has('status', 'ringkasan', 'laporan', 'summary', 'report')) {
     reply = jSummaryText();
   } else if (has('ubah', 'ganti', 'mode', 'export', 'aturan', 'rule', 'reset', 'jeda', 'pause', 'hubungkan', 'connect', 'matikan', 'force', 'missort')) {
@@ -1604,6 +1784,7 @@ window.jarvisSend = async () => {
   }
   if (reply) { jarvisSay(reply); return; }
   const typing = jarvisAddMsg('...', 'bot');
+  if (typing) typing.classList.add('typing');
   let raiErr = null;
   try {
     const ans = await askRaiGuest(raw);
@@ -1614,12 +1795,16 @@ window.jarvisSend = async () => {
     if (typing) typing.remove();
     raiErr = e;
   }
+  try {
+    const kr = window.raiKnowledgeReply ? window.raiKnowledgeReply(raw, state.sortingData, state.lang) : null;
+    if (kr) { jarvisSay(kr); return; }
+  } catch (e) {}
   jarvisSay(localOfflineReply());
 };
 
 function localOfflineReply() {
-  return JL('Mode lokal (guest): AI online tidak terjangkau, tapi saya tetap jawab dari data mesin. ' + jSummaryText() + ' Tanya saya soal status, total, warna (kuning/biru/merah), atau error.',
-    'Local mode (guest): online AI unreachable, but I still answer from machine data. ' + jSummaryText() + ' Ask me about status, total, colours (yellow/blue/red), or errors.');
+  return JL('⚠️ Mode lokal masih tahap demo & terus dikembangkan. AI online tidak terjangkau, tapi saya tetap jawab terbatas dari data mesin. ' + jSummaryText() + ' Tanya saya soal status, total, warna, eror (termasuk "kapan eror pertama/kedua/ketiga/terakhir"), atau istilah R-LAB.',
+    '⚠️ Local mode is still in demo phase & under development. Online AI unavailable, but I can answer limited queries from machine data. ' + jSummaryText() + ' Ask about status, totals, colors, errors (including "when was first/second/third/last error"), or R-LAB terms.');
 }
 
 (function boot() {

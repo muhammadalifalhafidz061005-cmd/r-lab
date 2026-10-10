@@ -515,6 +515,64 @@ html.dark .icon-btn:hover{background:rgba(198,154,69,.12);}
   }
   @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
   .login-card.shake{animation:shake .3s ease;}
+
+  /* ============ POLISH: animasi & desain premium ============ */
+  ::selection{background:rgba(198,154,69,.35);}
+  .page.active .card:nth-child(2){animation-delay:.05s;}
+  .page.active .card:nth-child(3){animation-delay:.1s;}
+  .page.active .card:nth-child(4){animation-delay:.15s;}
+  .page.active .card:nth-child(5){animation-delay:.2s;}
+  .page.active .card:nth-child(6){animation-delay:.25s;}
+  .jarvis-chip{transition:background .18s ease,border-color .18s ease,color .18s ease;}
+  .jarvis-chip:active{transform:scale(.96);}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  .modal.open .modal-backdrop{animation:fadeIn .25s ease-out both;}
+  @keyframes modalSpring{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+  .modal.open .modal-panel{animation:modalSpring .34s cubic-bezier(.2,.9,.3,1.15) both;}
+  @keyframes toastPop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  #toast.show .toast-inner{animation:toastPop .32s cubic-bezier(.2,.9,.3,1.2) both;}
+  .export-tile{transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease;}
+  .export-tile:hover{transform:translateY(-2px);}
+  /* ============ REFINED MOTION: tenang, presisi, modern ============ */
+  :root{--ease:cubic-bezier(.2,.8,.3,1);}
+  @keyframes riseSoft{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .page.active .card{animation:riseSoft .28s var(--ease) both;}
+  .page.active .card:nth-child(7){animation-delay:.18s;}
+  .page.active .card:nth-child(n+8){animation-delay:.22s;}
+  .card-hover{transition:transform .2s var(--ease),box-shadow .2s var(--ease),border-color .2s var(--ease);}
+  .card-hover:hover{transform:translateY(-2px);box-shadow:0 1px 2px rgba(15,23,42,.06),0 14px 28px -20px rgba(15,23,42,.35);}
+  .card-hover:active{transform:translateY(0);}
+  .btn-ghost,.btn-warn,.btn-primary,.side-btn,.sidebar-btn,.icon-btn{transition:transform .15s var(--ease),background .18s ease,border-color .18s ease,color .18s ease,box-shadow .18s ease;}
+  .btn-ghost:active,.btn-warn:active,.btn-primary:active{transform:scale(.98);}
+  .side-btn:active,.sidebar-btn:active,.icon-btn:active{transform:scale(.95);}
+  .icon-btn:hover{border-color:#e3cf9a;}
+  .jarvis-msg.typing{animation:typingSoft 1.2s ease-in-out infinite;}
+  @keyframes typingSoft{0%,100%{opacity:.5}50%{opacity:1}}
+  @keyframes drawerIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
+  .drawer.open .side-btn{animation:drawerIn .22s var(--ease) both;}
+  .live-dot{position:relative;}
+  .live-dot::after{content:'';position:absolute;inset:-4px;border-radius:50%;border:1px solid rgba(34,197,94,.4);animation:ringSoft 2s var(--ease) infinite;}
+  @keyframes ringSoft{0%{transform:scale(.6);opacity:1}100%{transform:scale(1.25);opacity:0}}
+  #login-gate:not(.hide) .login-card{animation:modalSpring .32s var(--ease) both;}
+  .pill{transition:background .2s ease,color .2s ease,border-color .2s ease;}
+  @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
+
+  /* ============ INTRO LOADER minimal pro (hanya saat baru masuk index) ============ */
+  #intro{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;color:#e8eef7;cursor:pointer;
+    background:#0b1220;background-image:radial-gradient(60% 45% at 50% 38%,rgba(90,134,214,.12),transparent 70%);transition:opacity .3s ease,visibility .3s;}
+  #intro.done{opacity:0;visibility:hidden;pointer-events:none;}
+  .intro-box{width:min(300px,80vw);display:flex;flex-direction:column;gap:.7rem;}
+  .intro-row{display:flex;align-items:center;gap:.7rem;}
+  .intro-logo{width:44px;height:44px;object-fit:cover;border-radius:12px;border:1px solid rgba(232,238,247,.18);opacity:0;animation:introIn .4s cubic-bezier(.2,.8,.3,1) .05s both;}
+  .intro-name{margin:0;font-weight:800;font-size:.95rem;letter-spacing:.28em;opacity:0;animation:introIn .4s cubic-bezier(.2,.8,.3,1) .12s both;}
+  .intro-name small{display:block;font-size:.56rem;font-weight:600;letter-spacing:.32em;color:#8b98ad;margin-top:.2rem;}
+  .intro-track{height:2px;border-radius:99px;background:rgba(232,238,247,.12);overflow:hidden;}
+  .intro-fill{height:100%;width:0%;border-radius:99px;background:#e8eef7;transition:width .1s linear;}
+  .intro-meta{display:flex;justify-content:space-between;align-items:center;}
+  .intro-status{margin:0;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:.6rem;letter-spacing:.14em;color:#8b98ad;}
+  .intro-status::before{content:'› ';color:#5a86d6;}
+  .intro-pct{margin:0;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:.6rem;color:#8b98ad;min-width:3em;text-align:right;}
+  @keyframes introIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
   #login-err{display:none;color:#dc2626;font-size:11px;font-weight:700;margin-top:.6rem;}
   #login-err.show{display:block;}
 
@@ -530,6 +588,52 @@ html.dark .icon-btn:hover{background:rgba(198,154,69,.12);}
 
   <body>
   <div class="orbs" aria-hidden="true"></div>
+
+  <!-- ===================== INTRO LOADER minimal (hanya saat baru masuk index) ===================== -->
+  <div id="intro" aria-hidden="true">
+    <div class="intro-box">
+      <div class="intro-row">
+        <img src="logo.png" alt="" class="intro-logo" onerror="this.style.display='none'">
+        <p class="intro-name">R-LAB<small>SMART SORTING</small></p>
+      </div>
+      <div class="intro-track"><div class="intro-fill" id="intro-fill"></div></div>
+      <div class="intro-meta">
+        <p class="intro-status" id="intro-status">MENYIAPKAN DASHBOARD</p>
+        <p class="intro-pct" id="intro-pct">0%</p>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function(){
+    var el = document.getElementById('intro');
+    if (!el) return;
+    function kill(){ if (el.parentNode) el.parentNode.removeChild(el); }
+    // Hanya tampil saat BARU masuk index di sesi ini; navigasi ulang / balik dari guest = langsung masuk
+    try { if (sessionStorage.getItem('rlab_intro_seen') === '1') { kill(); return; } } catch (e) {}
+    try { if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) { try { sessionStorage.setItem('rlab_intro_seen','1'); } catch (e2) {} kill(); return; } } catch (e) {}
+    var done = false;
+    function finish(){
+      if (done) return; done = true;
+      try { sessionStorage.setItem('rlab_intro_seen','1'); } catch (e) {}
+      el.classList.add('done');
+      setTimeout(kill, 350);
+    }
+    el.addEventListener('click', finish);
+    var fill = document.getElementById('intro-fill');
+    var pct = document.getElementById('intro-pct');
+    var sts = document.getElementById('intro-status');
+    var steps = ['MENYIAPKAN DASHBOARD', 'MEMUAT MODEL AI', 'MENGHUBUNGKAN DATABASE', 'SIAP'];
+    var t0 = Date.now(), DUR = 1100;
+    var timer = setInterval(function(){
+      var p = Math.min(100, Math.round((Date.now() - t0) / DUR * 100));
+      if (fill) fill.style.width = p + '%';
+      if (pct) pct.textContent = p + '%';
+      if (sts) sts.textContent = steps[Math.min(steps.length - 1, Math.floor(p / (100 / steps.length)))];
+      if (p >= 100) { clearInterval(timer); setTimeout(finish, 180); }
+    }, 50);
+    setTimeout(finish, 4000);
+  })();
+  </script>
 
   <!-- ===================== LOGIN GATE ===================== -->
   <div id="login-gate" role="dialog" aria-label="Login R-LAB">
@@ -808,6 +912,20 @@ html.dark .icon-btn:hover{background:rgba(198,154,69,.12);}
               <h3 class="font-bold text-base t-main">Ahmad Bilal Alfatih</h3>
               <span class="role-chip" data-i18n="team.role3">Programmer Code Otak Robot dan Elektronika</span>
               <p class="text-[12px] t-muted mt-3 leading-relaxed" data-i18n="team.desc3">Embedded firmware, micro:bit UART protocol and electronic wiring.</p>
+            </div>
+
+            <div class="team-card" style="--c1:#0d9488">
+              <div class="team-avatar">AP</div>
+              <h3 class="font-bold text-base t-main">Anandha Putra Biankan</h3>
+              <span class="role-chip" data-i18n="team.role4">Mekanik</span>
+              <p class="text-[12px] t-muted mt-3 leading-relaxed" data-i18n="team.desc4">Mechanical assembly, structural fabrication and sorting mechanism maintenance.</p>
+            </div>
+
+            <div class="team-card" style="--c1:#7c3aed">
+              <div class="team-avatar">RF</div>
+              <h3 class="font-bold text-base t-main">Rafandra</h3>
+              <span class="role-chip" data-i18n="team.role5">Mekanik</span>
+              <p class="text-[12px] t-muted mt-3 leading-relaxed" data-i18n="team.desc5">Mechanical systems integration, actuator calibration and hardware testing.</p>
             </div>
           </div>
 
@@ -1185,9 +1303,12 @@ html.dark .icon-btn:hover{background:rgba(198,154,69,.12);}
       'team.eyebrow':'Tim Di Balik Mesin Ini',
       'team.desc':'Sinergi antara mekanik, kecerdasan artifisial, dan elektronika — membangun sistem penyortiran cerdas otonom untuk panggung internasional.',
       'team.role1':'Mekanik','team.role2':'Programmer Website dan AI','team.role3':'Programmer Code Otak Robot dan Elektronika',
+      'team.role4':'Mekanik','team.role5':'Mekanik',
       'team.desc1':'Desain mekanik, fabrikasi chassis, dan perakitan aktuator penyortir.',
       'team.desc2':'Rekayasa dasbor, pipeline data real-time, dan pelatihan model computer vision.',
       'team.desc3':'Firmware embedded, protokol UART micro:bit, dan pengkabelan elektronika.',
+      'team.desc4':'Perakitan mekanik, fabrikasi struktural, dan pemeliharaan mekanisme sortir.',
+      'team.desc5':'Integrasi sistem mekanik, kalibrasi aktuator, dan pengujian perangkat keras.',
       'team.footer':'Dirancang untuk Kompetisi Robotika & AI Internasional.',
       'arch.title':'Arsitektur Sistem','arch.sub':'Bagaimana data mengalir dari kamera hingga ke cloud.',
       'set.title':'Pengaturan','set.language':'Bahasa','set.theme':'Mode Gelap','set.themeSub':'Aktifkan tampilan gelap futuristik',
@@ -1215,9 +1336,12 @@ html.dark .icon-btn:hover{background:rgba(198,154,69,.12);}
       'team.eyebrow':'The Team Behind The Machine',
       'team.desc':'A synergy of mechanics, artificial intelligence and electronics — building an autonomous smart sorting system for the international stage.',
       'team.role1':'Mechanic','team.role2':'Website & AI Programmer','team.role3':'Robot Brain Code & Electronics Programmer',
+      'team.role4':'Mechanic','team.role5':'Mechanic',
       'team.desc1':'Mechanical design, chassis fabrication and sorting actuator assembly.',
       'team.desc2':'Dashboard engineering, real-time data pipeline and computer-vision model training.',
       'team.desc3':'Embedded firmware, micro:bit UART protocol and electronic wiring.',
+      'team.desc4':'Mechanical assembly, structural fabrication and sorting mechanism maintenance.',
+      'team.desc5':'Mechanical systems integration, actuator calibration and hardware testing.',
       'team.footer':'Engineered for the International Robotics & AI Competition.',
       'arch.title':'System Architecture','arch.sub':'How data travels from the camera to the cloud.',
       'set.title':'Settings','set.language':'Language','set.theme':'Dark Mode','set.themeSub':'Enable the futuristic dark interface',
@@ -1742,7 +1866,7 @@ html.dark .icon-btn:hover{background:rgba(198,154,69,.12);}
 
       if (state.db) {
         update(ref(state.db, `${state.currentPath}/gagal`), {
-          [state.sortingData.gagal - 1]: { timestamp: nowMs, value: 1 }
+          [state.sortingData.gagal - 1]: { timestamp: nowMs, value: 1, warna: properColorName }
         }).catch(e => console.error("Firebase Error:", e));
       }
 
@@ -1856,6 +1980,22 @@ html.dark .icon-btn:hover{background:rgba(198,154,69,.12);}
     }
   }
 
+  function inferMissortColor() {
+    if (state.lastDetection && state.lastDetection.name) {
+      const n = state.lastDetection.name.toLowerCase();
+      if (n.includes('kuning') || n.includes('yellow')) return 'Kuning';
+      if (n.includes('biru') || n.includes('blue')) return 'Biru';
+      if (n.includes('merah') || n.includes('red')) return 'Merah';
+    }
+    const recent = state.excelLogs.filter(r => r.nilai === 1 && r.warna !== 'Unknown').slice(-5);
+    if (recent.length) {
+      const counts = { Kuning: 0, Biru: 0, Merah: 0 };
+      recent.forEach(r => { if (counts[r.warna] !== undefined) counts[r.warna]++; });
+      return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+    }
+    return 'Unknown';
+  }
+
   window.logMissort = async () => {
     state.sortingData.gagal++; updateUIStats(); updateChart();
     const nowMs = Date.now();
@@ -1863,11 +2003,12 @@ html.dark .icon-btn:hover{background:rgba(198,154,69,.12);}
     const timeStr = now.toLocaleTimeString('id-ID');
     const dateTimeStr = formatDateTime(now);
     const qcMode = $('mode-selector').value;
+    const missortColor = inferMissortColor();
 
     state.excelLogs.push({
       datetime: dateTimeStr,
       timestamp: timeStr,
-      warna: 'Unknown',
+      warna: missortColor,
       mode: qcMode,
       status: 'Manual QC',
       duration: '—',
@@ -1876,12 +2017,12 @@ html.dark .icon-btn:hover{background:rgba(198,154,69,.12);}
     });
 
     pushFeed({ icon: 'fas fa-triangle-exclamation', style: 'background:rgba(249,115,22,.18);color:#f97316',
-      title: 'Error', desc: `${dateTimeStr} · ${qcMode}`,
+      title: 'Error', desc: `${dateTimeStr} · ${qcMode} · ${missortColor}`,
       ts: nowMs, kind: 'data', key: 'err|' + nowMs });
 
     if (state.db) {
       await update(ref(state.db, `${state.currentPath}/gagal`), {
-        [state.sortingData.gagal - 1]: { timestamp: nowMs, value: 1 }
+        [state.sortingData.gagal - 1]: { timestamp: nowMs, value: 1, warna: missortColor }
       });
     }
   };
@@ -2175,7 +2316,10 @@ html.dark .icon-btn:hover{background:rgba(198,154,69,.12);}
     const g = $('login-gate');
     if (g) g.classList.add('hide');
   }
-  window.loginGuest = () => { window.location.href = 'guest.html'; };
+  window.loginGuest = () => {
+    // Langsung masuk ke guest, tanpa loading screen tambahan
+    window.location.href = 'guest.html';
+  };
   window.logoutAdmin = () => {
     try { sessionStorage.removeItem('rlab_admin_auth'); } catch (e) {}
     const pw = $('admin-pass'); if (pw) pw.value = '';
@@ -2399,11 +2543,12 @@ html.dark .icon-btn:hover{background:rgba(198,154,69,.12);}
     });
     collectEntries(data.gagal).forEach(e => {
       const ts = Number(e.timestamp) || 0;
+      const errWarna = e.warna || 'Unknown';
       out.push({
         datetime: ts ? formatDateTime(new Date(ts)) : '-',
         timestamp: ts ? new Date(ts).toLocaleTimeString('id-ID') : '-',
-        warna: 'Unknown',
-        mode: '-',
+        warna: errWarna,
+        mode: e.mode || '-',
         status: 'Timeout/Error',
         duration: '—',
         durationMs: 0,
@@ -3154,16 +3299,39 @@ html.dark .icon-btn:hover{background:rgba(198,154,69,.12);}
     showToast(jarvisVoice ? 'Jarvis bersuara' : 'Jarvis bisu');
   };
   function getRaiStatus() { return raiBackendOK ? 'online (server lokal)' : 'mode cadangan'; }
+
+  function getErrorHistory(limit) {
+    const logs = state.excelLogs.filter(r => r.nilai === 0 && r.warna !== 'Unknown');
+    const sorted = logs.slice().sort((a, b) => (a._ts || 0) - (b._ts || 0));
+    return (limit ? sorted.slice(0, limit) : sorted).map(r => ({
+      urut: sorted.indexOf(r) + 1,
+      warna: r.warna,
+      datetime: r.datetime,
+      timestamp: r.timestamp,
+      status: r.status,
+      mode: r.mode,
+      duration: r.duration
+    }));
+  }
+
+  function errorHistoryText(limit) {
+    const hist = getErrorHistory(limit);
+    if (!hist.length) return 'Belum ada eror dengan warna tercatat.';
+    return hist.map(e => `${e.urut}. ${e.warna} — ${e.datetime} (${e.status}, mode ${e.mode})`).join('; ');
+  }
+
   /* Konteks live agar R-AI bisa mikir pakai data nyata */
   function raiContext() {
     const s = getSummary();
     let mode = '-';
     try { mode = $('mode-selector').value; } catch (e) {}
+    const errHist = getErrorHistory(5);
+    const errCtx = errHist.length ? '; riwayat eror (5 terbaru): ' + errHist.map(e => `${e.warna}@${e.timestamp}`).join(', ') : '';
     return 'Konteks live R-LAB: total=' + s.total + ', kuning=' + s.kuning + ', biru=' + s.biru +
       ', merah=' + s.merah + ', error=' + s.gagal + ', sukses=' + s.rate + '%, mode=' + mode +
       ', bluetooth=' + (state.bleConnected ? 'online' : 'offline') + ', database=' + (state.db ? 'synced' : 'offline') +
       ', AIvision=' + (state.aiReady ? (state.isPaused ? 'paused' : 'online') : 'off') +
-      ', aturanAktif=' + loadRules().filter(r => r.enabled).length + '.';
+      ', aturanAktif=' + loadRules().filter(r => r.enabled).length + errCtx + '.';
   }
 const FREE_TIMEOUT = 8000;
 async function askRaiFree(q) {
@@ -3472,6 +3640,7 @@ async function askRaiFree(q) {
     jarvisAddMsg(raw, 'user');
     try { if (await handleResetConfirm(raw)) return; } catch (e) {}
     const typing = jarvisAddMsg('...', 'bot');
+    if (typing) typing.classList.add('typing');
     let raiErr = null;
     try {
       const res = await askRai(raw);
@@ -3495,8 +3664,8 @@ async function askRaiFree(q) {
 
   /* Jawaban lokal pamungkas: selalu jawab dari data mesin walau semua API mati. */
   function localOfflineReply() {
-    return JL('Mode lokal: AI online tidak terjangkau, tapi saya tetap jawab dari data mesin. ' + jSummaryText() + ' Tanya saya soal status, total, warna (kuning/biru/merah), error, atau istilah seperti servo, kamera, dan konveyor.',
-      'Local mode: online AI unreachable, but I still answer from machine data. ' + jSummaryText() + ' Ask me about status, total, colours (yellow/blue/red), errors, or terms like servo, camera, and conveyor.');
+    return JL('⚠️ Mode lokal masih tahap demo & terus dikembangkan. AI online tidak terjangkau, tapi saya tetap jawab terbatas dari data mesin sesuai konteks R-LAB. ' + jSummaryText() + ' Tanya saya soal status, total, warna, eror (termasuk "kapan eror pertama/kedua/ketiga/terakhir"), atau istilah seperti servo, kamera, konveyor, hopper, solenoid.',
+      '⚠️ Local mode is still in demo phase & under development. Online AI unavailable, but I can answer limited R-LAB queries from machine data. ' + jSummaryText() + ' Ask about status, totals, colors, errors (including "when was first/second/third/last error"), or terms like servo, camera, conveyor, hopper, solenoid.');
   }
 
   async function processCommand(raw) {
@@ -3558,6 +3727,23 @@ async function askRaiFree(q) {
     if (has('error', 'eror', 'gagal')) {
       if (has('berapa', 'jumlah', 'how many')) {
         jarvisSay(JL(`Error tercatat ${d.gagal} kali.`, `Errors logged ${d.gagal} times.`)); return true;
+      }
+      if (has('kapan', 'when', 'waktu', 'jam', 'pertama', 'kedua', 'ketiga', 'keempat', 'kelima', 'terakhir', 'last', 'first', 'second')) {
+        const hist = getErrorHistory(10);
+        if (!hist.length) {
+          jarvisSay(JL('Belum ada eror dengan warna tercatat.', 'No errors with recorded colors yet.'));
+        } else if (has('pertama', 'first', '1', 'satu')) {
+          const e = hist[0]; jarvisSay(JL(`Eror pertama: ${e.warna} pada ${e.datetime} (${e.status}, mode ${e.mode}).`, `First error: ${e.warna} at ${e.datetime} (${e.status}, mode ${e.mode}).`));
+        } else if (has('kedua', 'second', '2', 'dua')) {
+          const e = hist[1]; jarvisSay(e ? JL(`Eror kedua: ${e.warna} pada ${e.datetime} (${e.status}, mode ${e.mode}).`, `Second error: ${e.warna} at ${e.datetime} (${e.status}, mode ${e.mode}).`) : JL('Belum ada eror kedua.', 'No second error yet.'));
+        } else if (has('ketiga', 'third', '3', 'tiga')) {
+          const e = hist[2]; jarvisSay(e ? JL(`Eror ketiga: ${e.warna} pada ${e.datetime} (${e.status}, mode ${e.mode}).`, `Third error: ${e.warna} at ${e.datetime} (${e.status}, mode ${e.mode}).`) : JL('Belum ada eror ketiga.', 'No third error yet.'));
+        } else if (has('terakhir', 'last')) {
+          const e = hist[hist.length - 1]; jarvisSay(JL(`Eror terakhir: ${e.warna} pada ${e.datetime} (${e.status}, mode ${e.mode}).`, `Last error: ${e.warna} at ${e.datetime} (${e.status}, mode ${e.mode}).`));
+        } else {
+          jarvisSay(JL('Riwayat eror: ' + errorHistoryText(5), 'Error history: ' + errorHistoryText(5)));
+        }
+        return true;
       }
       window.logMissort();
       jarvisSay(JL('Error dicatat.', 'Error logged.')); return true;
